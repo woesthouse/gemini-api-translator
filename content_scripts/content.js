@@ -10,6 +10,18 @@ let translateButton = null;
 function createTranslationPopup() {
   // 이미 존재하는 팝업이 있으면 재사용
   if (currentPopup && document.body.contains(currentPopup)) {
+    // 모델 이름을 업데이트하기 위해 저장된 모델 정보를 가져옵니다
+    browser.storage.local.get('geminiModel').then(result => {
+      const modelName = result.geminiModel || "gemini-2.0-pro-exp-02-05";
+      const modelDisplay = getModelDisplayName(modelName);
+      
+      // 헤더 타이틀 업데이트
+      const headerTitle = currentPopup.querySelector('#gemini-header-title');
+      if (headerTitle) {
+        headerTitle.textContent = modelDisplay;
+      }
+    });
+    
     return currentPopup;
   }
   
@@ -31,7 +43,7 @@ function createTranslationPopup() {
     display: none;
   `;
   
-  // 내부 HTML 설정
+  // 내부 HTML 설정 - 헤더 타이틀에 ID 추가
   popup.innerHTML = `
     <div id="gemini-translation-header" style="
       display: flex;
@@ -44,10 +56,10 @@ function createTranslationPopup() {
       border-top-right-radius: 8px;
       cursor: move;
     ">
-      <div style="
+      <div id="gemini-header-title" style="
         font-weight: bold;
         color: #4285f4;
-      ">Gemini 번역</div>
+      ">모델 로딩 중...</div>
       <button id="gemini-close-btn" style="
         background: none;
         border: none;
@@ -69,6 +81,18 @@ function createTranslationPopup() {
   
   document.body.appendChild(popup);
   currentPopup = popup;
+  
+  // 현재 선택된 모델 정보 가져오기
+  browser.storage.local.get('geminiModel').then(result => {
+    const modelName = result.geminiModel || "gemini-2.0-pro-exp-02-05";
+    const modelDisplay = getModelDisplayName(modelName);
+    
+    // 헤더 타이틀 업데이트
+    const headerTitle = popup.querySelector('#gemini-header-title');
+    if (headerTitle) {
+      headerTitle.textContent = modelDisplay;
+    }
+  });
   
   // 닫기 버튼 기능
   const closeBtn = popup.querySelector('#gemini-close-btn');
@@ -262,21 +286,22 @@ function translateSelectedText() {
   // 번역 중 표시
   showTranslationPopup(selectedText, "번역 중...", rect.left, rect.bottom + 10);
   
-  // API 키와 모델 확인
-  browser.storage.local.get(['geminiApiKey', 'geminiModel']).then(result => {
+  // API 키, 모델, 언어 설정 확인
+  browser.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage']).then(result => {
     if (!result.geminiApiKey) {
       showTranslationPopup(selectedText, "Gemini API 키가 설정되지 않았습니다. 확장 프로그램 팝업에서 API 키를 설정해주세요.", rect.left, rect.bottom + 10);
       return;
     }
     
-    // 기본 대상 언어
-    const targetLanguage = 'ko'; // 항상 한국어로 번역
+    // 저장된 언어 설정 사용
+    const sourceLanguage = result.sourceLanguage || "auto";
+    const targetLanguage = result.targetLanguage || "ko"; // 기본값은 한국어
     
     // 번역 요청
     browser.runtime.sendMessage({
       action: "translateText",
       text: selectedText,
-      sourceLanguage: "auto",
+      sourceLanguage: sourceLanguage,
       targetLanguage: targetLanguage,
       apiKey: result.geminiApiKey,
       modelName: result.geminiModel
@@ -395,20 +420,21 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     showTranslationPopup(selectedText, "번역 중...", rect.left, rect.bottom + 10);
     
     // API 키와 모델 확인
-    browser.storage.local.get(['geminiApiKey', 'geminiModel']).then(result => {
+    browser.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage']).then(result => {
       if (!result.geminiApiKey) {
         showTranslationPopup(selectedText, "Gemini API 키가 설정되지 않았습니다. 확장 프로그램 팝업에서 API 키를 설정해주세요.", rect.left, rect.bottom + 10);
         return;
       }
       
-      // 기본 대상 언어
-      const targetLanguage = 'ko'; // 항상 한국어로 번역
+      // 저장된 언어 설정 사용
+      const sourceLanguage = result.sourceLanguage || "auto";
+      const targetLanguage = result.targetLanguage || "ko"; // 기본값은 한국어
       
       // 번역 요청
       browser.runtime.sendMessage({
         action: "translateText",
         text: selectedText,
-        sourceLanguage: "auto",
+        sourceLanguage: sourceLanguage,
         targetLanguage: targetLanguage,
         apiKey: result.geminiApiKey,
         modelName: result.geminiModel
@@ -463,6 +489,16 @@ function addStyles() {
     }
   `;
   document.head.appendChild(style);
+}
+
+// 모델 ID를 사용자 친화적인 이름으로 변환하는 함수
+function getModelDisplayName(modelId) {
+  const modelMap = {
+    "gemini-2.0-pro-exp-02-05": "Gemini 2.0 Pro 번역",
+    "gemini-2.0-flash-thinking-exp-01-21": "Gemini 2.0 Flash Thinking 번역"
+  };
+  
+  return modelMap[modelId] || modelId;
 }
 
 addStyles(); 

@@ -9,8 +9,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const saveApiKeyBtn = document.getElementById('saveApiKey');
   const apiKeyStatus = document.getElementById('apiKeyStatus');
 
-  // API 키와 모델 불러오기
-  browser.storage.local.get(['geminiApiKey', 'geminiModel']).then(result => {
+  // API 키, 모델, 언어 설정 불러오기
+  browser.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage']).then(result => {
     // API 키 설정
     if (result.geminiApiKey) {
       apiKeyInput.value = result.geminiApiKey;
@@ -25,12 +25,35 @@ document.addEventListener('DOMContentLoaded', function() {
       // 기본값으로 첫 번째 모델 저장
       browser.storage.local.set({ geminiModel: geminiModelSelect.value });
     }
+    
+    // 언어 설정
+    if (result.sourceLanguage) {
+      sourceLanguageSelect.value = result.sourceLanguage;
+    }
+    
+    if (result.targetLanguage) {
+      targetLanguageSelect.value = result.targetLanguage;
+    }
   });
 
   // 모델 변경 시 저장
   geminiModelSelect.addEventListener('change', function() {
     browser.storage.local.set({ geminiModel: geminiModelSelect.value }).then(() => {
       console.log('모델이 변경되었습니다:', geminiModelSelect.value);
+    });
+  });
+  
+  // 소스 언어 변경 시 저장
+  sourceLanguageSelect.addEventListener('change', function() {
+    browser.storage.local.set({ sourceLanguage: sourceLanguageSelect.value }).then(() => {
+      console.log('소스 언어가 변경되었습니다:', sourceLanguageSelect.value);
+    });
+  });
+  
+  // 대상 언어 변경 시 저장
+  targetLanguageSelect.addEventListener('change', function() {
+    browser.storage.local.set({ targetLanguage: targetLanguageSelect.value }).then(() => {
+      console.log('대상 언어가 변경되었습니다:', targetLanguageSelect.value);
     });
   });
 
