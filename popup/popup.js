@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
+  const geminiModelSelect = document.getElementById('geminiModel');
   const sourceLanguageSelect = document.getElementById('sourceLanguage');
   const targetLanguageSelect = document.getElementById('targetLanguage');
   const sourceTextArea = document.getElementById('sourceText');
@@ -8,13 +9,29 @@ document.addEventListener('DOMContentLoaded', function() {
   const saveApiKeyBtn = document.getElementById('saveApiKey');
   const apiKeyStatus = document.getElementById('apiKeyStatus');
 
-  // API 키 불러오기
-  browser.storage.local.get('geminiApiKey').then(result => {
+  // API 키와 모델 불러오기
+  browser.storage.local.get(['geminiApiKey', 'geminiModel']).then(result => {
+    // API 키 설정
     if (result.geminiApiKey) {
       apiKeyInput.value = result.geminiApiKey;
       apiKeyStatus.textContent = 'API 키가 저장되어 있습니다.';
       apiKeyStatus.className = 'success';
     }
+    
+    // 모델 설정
+    if (result.geminiModel) {
+      geminiModelSelect.value = result.geminiModel;
+    } else {
+      // 기본값으로 첫 번째 모델 저장
+      browser.storage.local.set({ geminiModel: geminiModelSelect.value });
+    }
+  });
+
+  // 모델 변경 시 저장
+  geminiModelSelect.addEventListener('change', function() {
+    browser.storage.local.set({ geminiModel: geminiModelSelect.value }).then(() => {
+      console.log('모델이 변경되었습니다:', geminiModelSelect.value);
+    });
   });
 
   // API 키 저장하기
@@ -40,13 +57,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // API 키 확인
-    const apiKeyResult = await browser.storage.local.get('geminiApiKey');
-    if (!apiKeyResult.geminiApiKey) {
+    const result = await browser.storage.local.get(['geminiApiKey', 'geminiModel']);
+    if (!result.geminiApiKey) {
       translatedTextArea.value = 'Gemini API 키를 입력하고 저장해주세요.';
       return;
     }
 
-    const apiKey = apiKeyResult.geminiApiKey;
+    const apiKey = result.geminiApiKey;
+    const modelName = result.geminiModel || geminiModelSelect.value;
     const sourceLanguage = sourceLanguageSelect.value;
     const targetLanguage = targetLanguageSelect.value;
 
@@ -55,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
     translateBtn.disabled = true;
 
     try {
-      const response = await translateText(sourceText, sourceLanguage, targetLanguage, apiKey);
+      const response = await translateText(sourceText, sourceLanguage, targetLanguage, apiKey, modelName);
       translatedTextArea.value = response;
     } catch (error) {
       translatedTextArea.value = `오류 발생: ${error.message}`;
@@ -64,16 +82,44 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Gemini API를 사용한 번역 함수
-  async function translateText(text, sourceLanguage, targetLanguage, apiKey) {
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent?key=${apiKey}`;
+  // 텍스트 번역 함수
+  async function translateText(text, sourceLanguage, targetLanguage, apiKey, modelName) {
+    if (!text) {
+      return '번역할 텍스트를 입력해주세요.';
+    }
     
-    // 번역 프롬프트 구성
-    let prompt = `다음 텍스트를 ${getLanguageName(targetLanguage)}로 번역해주세요:\n\n${text}`;
+    if (!apiKey) {
+      return 'API 키를 입력해주세요.';
+    }
+    
+    // 번역 프롬프트 구성 - 개선
+    let prompt = `다음 텍스트를 ${getLanguageName(targetLanguage)}로 번역해주세요. 
+오직 입력된 텍스트만 번역하고, 번역된 텍스트만 출력해주세요.
+여러 번역 결과를 제시하지 말고 하나의 최적 번역만 제공해주세요.
+마크다운 형식이나 추가 설명 없이 일반 텍스트로만 응답해주세요.
+따옴표나 괄호 등 원본에 없는 기호를 추가하지 마세요.
+입력된 텍스트에 단어와 문장이 함께 있을 경우에 메타 정보를 추가하지 마세요.
+텍스트의 모든 부분을 동일한 방식으로 처리하고, 특정 부분에 특별한 표시나 주석을 추가하지 마세요.
+번역 외의 다른 말을 하지 마세요. 번역만 해주세요.
+
+${text}`;
     
     if (sourceLanguage !== 'auto') {
-      prompt = `다음 ${getLanguageName(sourceLanguage)} 텍스트를 ${getLanguageName(targetLanguage)}로 번역해주세요:\n\n${text}`;
+      prompt = `다음 ${getLanguageName(sourceLanguage)} 텍스트를 ${getLanguageName(targetLanguage)}로 번역해주세요.
+오직 입력된 텍스트만 번역하고, 번역된 텍스트만 출력해주세요.
+여러 번역 결과를 제시하지 말고 하나의 최적 번역만 제공해주세요.
+마크다운 형식이나 추가 설명 없이 일반 텍스트로만 응답해주세요.
+따옴표나 괄호 등 원본에 없는 기호를 추가하지 마세요.
+입력된 텍스트에 단어와 문장이 함께 있을 경우에 메타 정보를 추가하지 마세요.
+텍스트의 모든 부분을 동일한 방식으로 처리하고, 특정 부분에 특별한 표시나 주석을 추가하지 마세요.
+번역 외의 다른 말을 하지 마세요. 번역만 해주세요.
+
+${text}`;
     }
+    
+    // 모델 이름이 없는 경우 기본값 사용
+    const model = modelName || "gemini-2.0-pro-exp-02-05";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     
     const requestBody = {
       contents: [
@@ -86,12 +132,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       ],
       generationConfig: {
-        temperature: 0.2,
+        temperature: 0.1,
         topP: 0.8,
         topK: 40
       }
     };
-
+    
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -99,12 +145,12 @@ document.addEventListener('DOMContentLoaded', function() {
       },
       body: JSON.stringify(requestBody)
     });
-
+    
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error.message || '번역 요청 중 오류가 발생했습니다.');
     }
-
+    
     const data = await response.json();
     
     // Gemini 응답에서 번역된 텍스트 추출
@@ -130,5 +176,11 @@ document.addEventListener('DOMContentLoaded', function() {
       'de': '독일어'
     };
     return languages[langCode] || langCode;
+  }
+
+  function showError(message) {
+    translatedTextArea.value = message;
+    apiKeyStatus.textContent = message;
+    apiKeyStatus.className = 'error';
   }
 }); 

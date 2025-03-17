@@ -159,15 +159,17 @@ function createTranslateButton() {
     background-color: #4285f4;
     color: white;
     border-radius: 4px;
-    padding: 6px 12px;
-    font-size: 12px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: bold;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     cursor: pointer;
     z-index: 99998;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     opacity: 0;
-    transition: opacity 0.2s ease-in-out;
+    transition: opacity 0.15s ease-in-out;
     user-select: none;
+    border: 1px solid rgba(0,0,0,0.1);
   `;
   translateButton.textContent = '번역하기';
   
@@ -191,15 +193,25 @@ function showTranslateButton(x, y) {
     translateButton = createTranslateButton();
   }
   
+  // 아직 애니메이션 중인 버튼을 리셋
+  translateButton.style.transition = 'none';
+  translateButton.style.opacity = '0';
+  
+  // 위치 설정
   translateButton.style.left = `${x}px`;
   translateButton.style.top = `${y}px`;
-  translateButton.style.opacity = '1';
   
   // 화면 밖으로 나가지 않도록 위치 조정
   const rect = translateButton.getBoundingClientRect();
   if (rect.right > window.innerWidth) {
     translateButton.style.left = `${window.innerWidth - rect.width - 10}px`;
   }
+  
+  // 트랜지션 리셋 후 표시
+  setTimeout(() => {
+    translateButton.style.transition = 'opacity 0.15s ease-in-out';
+    translateButton.style.opacity = '1';
+  }, 5);
 }
 
 // 번역 버튼 숨기기
@@ -250,8 +262,8 @@ function translateSelectedText() {
   // 번역 중 표시
   showTranslationPopup(selectedText, "번역 중...", rect.left, rect.bottom + 10);
   
-  // API 키 확인
-  browser.storage.local.get('geminiApiKey').then(result => {
+  // API 키와 모델 확인
+  browser.storage.local.get(['geminiApiKey', 'geminiModel']).then(result => {
     if (!result.geminiApiKey) {
       showTranslationPopup(selectedText, "Gemini API 키가 설정되지 않았습니다. 확장 프로그램 팝업에서 API 키를 설정해주세요.", rect.left, rect.bottom + 10);
       return;
@@ -266,7 +278,8 @@ function translateSelectedText() {
       text: selectedText,
       sourceLanguage: "auto",
       targetLanguage: targetLanguage,
-      apiKey: result.geminiApiKey
+      apiKey: result.geminiApiKey,
+      modelName: result.geminiModel
     }).then(response => {
       if (response.success) {
         showTranslationPopup(selectedText, response.translatedText, rect.left, rect.bottom + 10);
@@ -277,35 +290,81 @@ function translateSelectedText() {
   });
 }
 
-// 텍스트 선택 이벤트 감지
+// 텍스트 선택 변경 감지 (드래그 시 실시간 감지)
+let selectionChangeTimer = null;
+document.addEventListener('selectionchange', function() {
+  // 이전 타이머 취소
+  if (selectionChangeTimer) {
+    clearTimeout(selectionChangeTimer);
+  }
+  
+  // 약간의 지연 후 선택 내용 확인 (성능 최적화)
+  selectionChangeTimer = setTimeout(() => {
+    // 팝업 드래그 중이면 무시
+    if (isDragging && currentPopup && currentPopup.classList.contains('dragging')) return;
+    
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      // 선택된 텍스트가 없으면 번역 버튼 숨기기
+      hideTranslateButton();
+      return;
+    }
+    
+    const selectedText = selection.toString().trim();
+    if (!selectedText) {
+      hideTranslateButton();
+      return;
+    }
+    
+    try {
+      // 선택 범위 정보 가져오기
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      
+      // 번역 버튼 표시
+      showTranslateButton(rect.left, rect.bottom + 5);
+    } catch (e) {
+      console.error('선택 범위 정보를 가져오는 중 오류 발생:', e);
+    }
+  }, 300); // 300ms 지연 (드래그 중 과도한 업데이트 방지)
+});
+
+// 텍스트 선택 이벤트 감지 (마우스 버튼 떼는 시점)
 document.addEventListener('mouseup', function(e) {
-  // 이미 드래그 작업 중이면 무시
-  if (isDragging) return;
-  
-  // 번역 버튼이나 팝업 내부 클릭은 무시
-  if (translateButton && translateButton.contains(e.target)) return;
-  if (currentPopup && currentPopup.contains(e.target)) return;
-  
-  // 선택된 텍스트 확인
-  const selection = window.getSelection();
-  if (selection.isCollapsed) {
-    // 선택된 텍스트가 없으면 번역 버튼 숨기기
-    hideTranslateButton();
-    return;
-  }
-  
-  const selectedText = selection.toString().trim();
-  if (!selectedText) {
-    hideTranslateButton();
-    return;
-  }
-  
-  // 선택 범위 정보 가져오기
-  const range = selection.getRangeAt(0);
-  const rect = range.getBoundingClientRect();
-  
-  // 번역 버튼 표시
-  showTranslateButton(rect.left, rect.bottom + 5);
+  // 약간의 지연을 통해 선택이 완료된 후 처리
+  setTimeout(() => {
+    // 팝업 드래그 작업 중인 경우만 무시
+    if (isDragging && currentPopup && currentPopup.classList.contains('dragging')) return;
+    
+    // 번역 버튼이나 팝업 내부 클릭은 무시
+    if (translateButton && translateButton.contains(e.target)) return;
+    if (currentPopup && currentPopup.contains(e.target)) return;
+    
+    // 선택된 텍스트 확인
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) {
+      // 선택된 텍스트가 없으면 번역 버튼 숨기기
+      hideTranslateButton();
+      return;
+    }
+    
+    const selectedText = selection.toString().trim();
+    if (!selectedText) {
+      hideTranslateButton();
+      return;
+    }
+    
+    try {
+      // 선택 범위 정보 가져오기
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      
+      // 번역 버튼 표시
+      showTranslateButton(rect.left, rect.bottom + 5);
+    } catch (e) {
+      console.error('선택 범위 정보를 가져오는 중 오류 발생:', e);
+    }
+  }, 10);
 });
 
 // 클릭하면 번역 버튼 숨기기 (선택 영역 외부 클릭 시)
@@ -335,8 +394,8 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // 팝업에 로딩 표시
     showTranslationPopup(selectedText, "번역 중...", rect.left, rect.bottom + 10);
     
-    // API 키 확인
-    browser.storage.local.get('geminiApiKey').then(result => {
+    // API 키와 모델 확인
+    browser.storage.local.get(['geminiApiKey', 'geminiModel']).then(result => {
       if (!result.geminiApiKey) {
         showTranslationPopup(selectedText, "Gemini API 키가 설정되지 않았습니다. 확장 프로그램 팝업에서 API 키를 설정해주세요.", rect.left, rect.bottom + 10);
         return;
@@ -351,7 +410,8 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
         text: selectedText,
         sourceLanguage: "auto",
         targetLanguage: targetLanguage,
-        apiKey: result.geminiApiKey
+        apiKey: result.geminiApiKey,
+        modelName: result.geminiModel
       }).then(response => {
         if (response.success) {
           showTranslationPopup(selectedText, response.translatedText, rect.left, rect.bottom + 10);

@@ -6,6 +6,15 @@ browser.runtime.onInstalled.addListener(() => {
     title: "선택한 텍스트 번역하기",
     contexts: ["selection"]
   });
+  
+  // 기본 모델 설정 (새로 설치한 경우)
+  browser.storage.local.get('geminiModel').then(result => {
+    if (!result.geminiModel) {
+      browser.storage.local.set({ 
+        geminiModel: "gemini-2.0-pro-exp-02-05" 
+      });
+    }
+  });
 });
 
 // 컨텍스트 메뉴 클릭 이벤트 처리
@@ -26,26 +35,63 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // API 번역 요청 처리
   if (message.action === "translateText") {
-    translateWithGemini(message.text, message.sourceLanguage, message.targetLanguage, message.apiKey)
-      .then(result => {
-        sendResponse({ success: true, translatedText: result });
-      })
-      .catch(error => {
-        sendResponse({ success: false, error: error.message });
+    const modelName = message.modelName || null;
+    
+    // 모델 이름이 없는 경우 저장된 모델 확인
+    if (!modelName) {
+      browser.storage.local.get('geminiModel').then(result => {
+        const model = result.geminiModel || "gemini-2.0-pro-exp-02-05";
+        translateWithGemini(message.text, message.sourceLanguage, message.targetLanguage, message.apiKey, model)
+          .then(result => {
+            sendResponse({ success: true, translatedText: result });
+          })
+          .catch(error => {
+            sendResponse({ success: false, error: error.message });
+          });
       });
+    } else {
+      // 모델 이름이 있는 경우 해당 모델 사용
+      translateWithGemini(message.text, message.sourceLanguage, message.targetLanguage, message.apiKey, modelName)
+        .then(result => {
+          sendResponse({ success: true, translatedText: result });
+        })
+        .catch(error => {
+          sendResponse({ success: false, error: error.message });
+        });
+    }
     return true; // 비동기 응답을 위해 true 반환
   }
 });
 
 // Gemini API를 사용한 번역 함수
-async function translateWithGemini(text, sourceLanguage, targetLanguage, apiKey) {
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-pro-exp-02-05:generateContent?key=${apiKey}`;
+async function translateWithGemini(text, sourceLanguage, targetLanguage, apiKey, modelName) {
+  // 모델 이름이 없는 경우 기본값 사용
+  const model = modelName || "gemini-2.0-pro-exp-02-05";
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   
-  // 번역 프롬프트 구성
-  let prompt = `다음 텍스트를 ${getLanguageName(targetLanguage)}로 번역해주세요:\n\n${text}`;
+  // 번역 프롬프트 구성 - 개선된 버전
+  let prompt = `다음 텍스트를 ${getLanguageName(targetLanguage)}로 번역해주세요. 
+오직 입력된 텍스트만 번역하고, 번역된 텍스트만 출력해주세요.
+여러 번역 결과를 제시하지 말고 하나의 최적 번역만 제공해주세요.
+마크다운 형식이나 추가 설명 없이 일반 텍스트로만 응답해주세요.
+따옴표나 괄호 등 원본에 없는 기호를 추가하지 마세요.
+입력된 텍스트에 단어와 문장이 함께 있을 경우에 메타 정보를 추가하지 마세요.
+텍스트의 모든 부분을 동일한 방식으로 처리하고, 특정 부분에 특별한 표시나 주석을 추가하지 마세요.
+번역 외의 다른 말을 하지 마세요. 번역만 해주세요.
+
+${text}`;
   
   if (sourceLanguage !== 'auto') {
-    prompt = `다음 ${getLanguageName(sourceLanguage)} 텍스트를 ${getLanguageName(targetLanguage)}로 번역해주세요:\n\n${text}`;
+    prompt = `다음 ${getLanguageName(sourceLanguage)} 텍스트를 ${getLanguageName(targetLanguage)}로 번역해주세요.
+오직 입력된 텍스트만 번역하고, 번역된 텍스트만 출력해주세요.
+여러 번역 결과를 제시하지 말고 하나의 최적 번역만 제공해주세요.
+마크다운 형식이나 추가 설명 없이 일반 텍스트로만 응답해주세요.
+따옴표나 괄호 등 원본에 없는 기호를 추가하지 마세요.
+입력된 텍스트에 단어와 문장이 함께 있을 경우에 메타 정보를 추가하지 마세요.
+텍스트의 모든 부분을 동일한 방식으로 처리하고, 특정 부분에 특별한 표시나 주석을 추가하지 마세요.
+번역 외의 다른 말을 하지 마세요. 번역만 해주세요.
+
+${text}`;
   }
   
   const requestBody = {
@@ -59,7 +105,7 @@ async function translateWithGemini(text, sourceLanguage, targetLanguage, apiKey)
       }
     ],
     generationConfig: {
-      temperature: 0.2,
+      temperature: 0.1,
       topP: 0.8,
       topK: 40
     }
