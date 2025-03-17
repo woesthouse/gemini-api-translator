@@ -1,0 +1,107 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 400px;
+  padding: 0;
+  background-color: #f9f9f9;
+  margin: 0;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 88%;
+  margin: 15px auto 15px 15px;
+  box-sizing: border-box;
+}
+
+h1 {
+  text-align: center;
+  color: #4285f4;
+  font-size: 22px;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #333;
+}
+
+select, textarea, input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+button {
+  background-color: #4285f4;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-bottom: 15px;
+  width: 100%;
+  transition: background-color 0.2s;
+  box-sizing: border-box;
+}
+
+button:hover {
+  background-color: #3367d6;
+}
+
+#saveApiKey {
+  width: auto;
+  margin-left: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.api-key-section {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+#apiKey {
+  width: calc(100% - 80px);
+  display: inline-block;
+  margin-right: 5px;
+}
+
+#apiKeyStatus {
+  margin-top: 5px;
+  font-size: 12px;
+  width: 100%;
+}
+
+.success {
+  color: green;
+}
+
+.error {
+  color: red;
+} 
