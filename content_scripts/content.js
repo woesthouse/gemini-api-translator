@@ -5,6 +5,7 @@ let dragStartX = 0;
 let dragStartY = 0;
 let initialLeft = 0;
 let initialTop = 0;
+let translateButton = null;
 
 function createTranslationPopup() {
   // 이미 존재하는 팝업이 있으면 재사용
@@ -145,6 +146,69 @@ function createTranslationPopup() {
   return popup;
 }
 
+// 번역하기 버튼 생성
+function createTranslateButton() {
+  if (translateButton) {
+    document.body.removeChild(translateButton);
+  }
+  
+  translateButton = document.createElement('div');
+  translateButton.id = 'gemini-translate-button';
+  translateButton.style.cssText = `
+    position: fixed;
+    background-color: #4285f4;
+    color: white;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    cursor: pointer;
+    z-index: 99998;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    user-select: none;
+  `;
+  translateButton.textContent = '번역하기';
+  
+  document.body.appendChild(translateButton);
+  
+  // 버튼 효과
+  translateButton.addEventListener('mouseover', function() {
+    this.style.backgroundColor = '#3367d6';
+  });
+  
+  translateButton.addEventListener('mouseout', function() {
+    this.style.backgroundColor = '#4285f4';
+  });
+  
+  return translateButton;
+}
+
+// 번역 버튼 표시
+function showTranslateButton(x, y) {
+  if (!translateButton) {
+    translateButton = createTranslateButton();
+  }
+  
+  translateButton.style.left = `${x}px`;
+  translateButton.style.top = `${y}px`;
+  translateButton.style.opacity = '1';
+  
+  // 화면 밖으로 나가지 않도록 위치 조정
+  const rect = translateButton.getBoundingClientRect();
+  if (rect.right > window.innerWidth) {
+    translateButton.style.left = `${window.innerWidth - rect.width - 10}px`;
+  }
+}
+
+// 번역 버튼 숨기기
+function hideTranslateButton() {
+  if (translateButton) {
+    translateButton.style.opacity = '0';
+  }
+}
+
 // 텍스트 선택 시 번역 팝업 표시
 function showTranslationPopup(text, translatedText, x, y) {
   const popup = createTranslationPopup();
@@ -153,6 +217,9 @@ function showTranslationPopup(text, translatedText, x, y) {
   if (content) {
     content.textContent = translatedText;
   }
+  
+  // 번역 버튼 숨기기
+  hideTranslateButton();
   
   // 팝업 위치 설정
   popup.style.left = `${x}px`;
@@ -169,7 +236,93 @@ function showTranslationPopup(text, translatedText, x, y) {
   }
 }
 
-// 배경 스크립트로부터 메시지 수신
+// 선택한 텍스트 번역 함수
+function translateSelectedText() {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) return;
+  
+  const selectedText = selection.toString().trim();
+  if (!selectedText) return;
+  
+  const range = selection.getRangeAt(0);
+  const rect = range.getBoundingClientRect();
+  
+  // 번역 중 표시
+  showTranslationPopup(selectedText, "번역 중...", rect.left, rect.bottom + 10);
+  
+  // API 키 확인
+  browser.storage.local.get('geminiApiKey').then(result => {
+    if (!result.geminiApiKey) {
+      showTranslationPopup(selectedText, "Gemini API 키가 설정되지 않았습니다. 확장 프로그램 팝업에서 API 키를 설정해주세요.", rect.left, rect.bottom + 10);
+      return;
+    }
+    
+    // 기본 대상 언어
+    const targetLanguage = 'ko'; // 항상 한국어로 번역
+    
+    // 번역 요청
+    browser.runtime.sendMessage({
+      action: "translateText",
+      text: selectedText,
+      sourceLanguage: "auto",
+      targetLanguage: targetLanguage,
+      apiKey: result.geminiApiKey
+    }).then(response => {
+      if (response.success) {
+        showTranslationPopup(selectedText, response.translatedText, rect.left, rect.bottom + 10);
+      } else {
+        showTranslationPopup(selectedText, `오류 발생: ${response.error}`, rect.left, rect.bottom + 10);
+      }
+    });
+  });
+}
+
+// 텍스트 선택 이벤트 감지
+document.addEventListener('mouseup', function(e) {
+  // 이미 드래그 작업 중이면 무시
+  if (isDragging) return;
+  
+  // 번역 버튼이나 팝업 내부 클릭은 무시
+  if (translateButton && translateButton.contains(e.target)) return;
+  if (currentPopup && currentPopup.contains(e.target)) return;
+  
+  // 선택된 텍스트 확인
+  const selection = window.getSelection();
+  if (selection.isCollapsed) {
+    // 선택된 텍스트가 없으면 번역 버튼 숨기기
+    hideTranslateButton();
+    return;
+  }
+  
+  const selectedText = selection.toString().trim();
+  if (!selectedText) {
+    hideTranslateButton();
+    return;
+  }
+  
+  // 선택 범위 정보 가져오기
+  const range = selection.getRangeAt(0);
+  const rect = range.getBoundingClientRect();
+  
+  // 번역 버튼 표시
+  showTranslateButton(rect.left, rect.bottom + 5);
+});
+
+// 클릭하면 번역 버튼 숨기기 (선택 영역 외부 클릭 시)
+document.addEventListener('click', function(e) {
+  if (translateButton && !translateButton.contains(e.target) && currentPopup && !currentPopup.contains(e.target)) {
+    hideTranslateButton();
+  }
+});
+
+// 번역 버튼 클릭 이벤트
+document.addEventListener('click', function(e) {
+  if (translateButton && translateButton.contains(e.target)) {
+    translateSelectedText();
+  }
+});
+
+// 배경 스크립트로부터 메시지 수신 (컨텍스트 메뉴 통합용)
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "translateSelection") {
     const selectedText = message.text;
@@ -233,6 +386,20 @@ function addStyles() {
     
     #gemini-translation-content {
       line-height: 1.5;
+    }
+    
+    #gemini-translate-button {
+      pointer-events: auto;
+      transform: scale(1);
+      transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+    }
+    
+    #gemini-translate-button:hover {
+      transform: scale(1.05);
+    }
+    
+    #gemini-translate-button:active {
+      transform: scale(0.95);
     }
   `;
   document.head.appendChild(style);
