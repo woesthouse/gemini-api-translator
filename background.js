@@ -96,22 +96,24 @@ async function handleTranslateRequest(message) {
     
     // 저장된 매개변수 불러오기
     const result = await browser.storage.local.get(['systemPrompt', 'parameters']);
-    const savedSystemPrompt = result.systemPrompt;
     const parameters = result.parameters || { temperature: 0.7, topK: 40, topP: 0.95 };
     
     // 시스템 프롬프트 설정
-    let systemPrompt = savedSystemPrompt;
-    if (!systemPrompt) {
-      // 기본 프롬프트 불러오기
-      const response = await browser.runtime.sendMessage({ action: "getDefaultSystemPrompt" });
-      systemPrompt = response.defaultSystemPrompt;
+    // result.systemPrompt가 undefined인 경우만 오류로 판단
+    // "" 빈 문자열은 사용자가 의도적으로 빈칸으로 설정한 것으로 간주
+    let systemPrompt = result.systemPrompt;
+    if (systemPrompt === undefined) {
+      return { 
+        success: false, 
+        error: "시스템 프롬프트 설정에 문제가 있습니다. 확장 프로그램 설정을 확인해주세요." 
+      };
     }
     
     // 언어 정보 추가
     const sourceLangName = getLanguageName(sourceLanguage);
     const targetLangName = getLanguageName(targetLanguage);
     
-    let fullPrompt = systemPrompt;
+    let fullPrompt = systemPrompt || "";
     
     // 언어 지정이 자동이 아닌 경우 언어 정보 추가
     if (sourceLanguage !== 'auto') {
