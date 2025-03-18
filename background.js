@@ -51,9 +51,9 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (!modelName) {
             browser.storage.local.get('geminiModel').then(result => {
                 const model = result.geminiModel || "gemini-2.0-pro-exp-02-05";
-                translateWithGemini(message.text, message.sourceLanguage, message.targetLanguage, message.apiKey, model)
+                handleTranslateRequest(message)
                     .then(result => {
-                        sendResponse({ success: true, translatedText: result });
+                        sendResponse(result);
                     })
                     .catch(error => {
                         sendResponse({ success: false, error: error.message });
@@ -61,9 +61,9 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
             });
         } else {
             // 모델 이름이 있는 경우 해당 모델 사용
-            translateWithGemini(message.text, message.sourceLanguage, message.targetLanguage, message.apiKey, modelName)
+            handleTranslateRequest(message)
                 .then(result => {
-                    sendResponse({ success: true, translatedText: result });
+                    sendResponse(result);
                 })
                 .catch(error => {
                     sendResponse({ success: false, error: error.message });
@@ -89,94 +89,98 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
-// Gemini API를 사용한 번역 함수
-async function translateWithGemini(text, sourceLanguage, targetLanguage, apiKey, modelName) {
-    // 모델 이름이 없는 경우 기본값 사용
-    const model = modelName || "gemini-2.0-pro-exp-02-05";
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-    // 저장된 프롬프트 설정 가져오기
-    const settings = await browser.storage.local.get(['systemPrompt', 'userPrompt']);
+// 번역 요청 처리
+async function handleTranslateRequest(message) {
+  try {
+    const { text, sourceLanguage, targetLanguage, apiKey, modelName } = message;
     
-    // 프롬프트가 없을 경우 options.js로 기본값 저장 요청
-    if (!settings.systemPrompt) {
-        // 백그라운드에서 옵션 페이지의 기본값을 요청
-        browser.runtime.sendMessage({ action: "getDefaultSystemPrompt" })
-            .then(response => {
-                if (response && response.defaultSystemPrompt) {
-                    browser.storage.local.set({ systemPrompt: response.defaultSystemPrompt });
-                }
-            })
-            .catch(error => {
-                console.log("기본 프롬프트를 가져올 수 없습니다:", error);
-            });
+    // 저장된 매개변수 불러오기
+    const result = await browser.storage.local.get(['systemPrompt', 'parameters']);
+    const savedSystemPrompt = result.systemPrompt;
+    const parameters = result.parameters || { temperature: 0.7, topK: 40, topP: 0.95 };
+    
+    // 시스템 프롬프트 설정
+    let systemPrompt = savedSystemPrompt;
+    if (!systemPrompt) {
+      // 기본 프롬프트 불러오기
+      const response = await browser.runtime.sendMessage({ action: "getDefaultSystemPrompt" });
+      systemPrompt = response.defaultSystemPrompt;
     }
-    
-    // 프롬프트 구성
-    let promptBase = settings.systemPrompt || "다음 텍스트를 번역해주세요.";
     
     // 언어 정보 추가
-    let languageInfo = "";
+    const sourceLangName = getLanguageName(sourceLanguage);
+    const targetLangName = getLanguageName(targetLanguage);
+    
+    let fullPrompt = systemPrompt;
+    
+    // 언어 지정이 자동이 아닌 경우 언어 정보 추가
     if (sourceLanguage !== 'auto') {
-        languageInfo = `다음 ${getLanguageName(sourceLanguage)} 텍스트를 ${getLanguageName(targetLanguage)}로 번역`;
+      fullPrompt += `\n\n다음 ${sourceLangName} 텍스트를 ${targetLangName}로 번역해 주세요:`;
     } else {
-        languageInfo = `다음 텍스트를 ${getLanguageName(targetLanguage)}로 번역`;
+      fullPrompt += `\n\n다음 텍스트를 ${targetLangName}로 번역해 주세요:`;
     }
     
-    // 프롬프트에 이미 언어 정보가 포함되어 있지 않은 경우에만 추가
-    if (!promptBase.includes(getLanguageName(targetLanguage))) {
-        promptBase = languageInfo + promptBase.substring(promptBase.indexOf("해주세요"));
-    }
+    const translatedText = await translateWithGemini(
+      apiKey, 
+      modelName, 
+      fullPrompt, 
+      text,
+      parameters.temperature, 
+      parameters.topK, 
+      parameters.topP
+    );
     
-    // 사용자 정의 프롬프트 추가
-    let finalPrompt = promptBase;
-    if (settings.userPrompt) {
-        finalPrompt += `\n\n${settings.userPrompt}`;
+    return { success: true, translatedText };
+  } catch (error) {
+    console.error('번역 오류:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Gemini API를 사용하여 번역
+async function translateWithGemini(apiKey, modelName, systemPrompt, text, temperature, topK, topP) {
+  const apiUrl = `https://generativelanguage.googleapis.com/v2/models/${modelName}:generateContent?key=${apiKey}`;
+  
+  const requestData = {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          {
+            text: `${systemPrompt}\n\n${text}`
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: temperature,
+      topK: topK,
+      topP: topP,
+      candidateCount: 1,
+      maxOutputTokens: 1024,
     }
-    
-    // 번역할 텍스트 추가
-    finalPrompt += `\n\n${text}`;
-    
-    const requestBody = {
-        contents: [
-            {
-                parts: [
-                    {
-                        text: finalPrompt
-                    }
-                ]
-            }
-        ],
-        generationConfig: {
-            temperature: 0.1,
-            topP: 0.8,
-            topK: 40
-        }
-    };
-
-    const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error.message || '번역 요청 중 오류가 발생했습니다.');
-    }
-
-    const data = await response.json();
-
-    // Gemini 응답에서 번역된 텍스트 추출
-    if (data.candidates && data.candidates.length > 0 &&
-        data.candidates[0].content && data.candidates[0].content.parts &&
-        data.candidates[0].content.parts.length > 0) {
-        return data.candidates[0].content.parts[0].text.trim();
-    } else {
-        throw new Error('번역 결과를 찾을 수 없습니다.');
-    }
+  };
+  
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestData)
+  });
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`API 오류: ${errorData.error.message}`);
+  }
+  
+  const data = await response.json();
+  
+  if (!data.candidates || data.candidates.length === 0) {
+    throw new Error('응답이 없습니다.');
+  }
+  
+  return data.candidates[0].content.parts[0].text;
 }
 
 // 언어 코드에 해당하는 언어 이름 반환 함수
