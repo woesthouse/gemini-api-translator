@@ -341,16 +341,7 @@ document.addEventListener('selectionchange', function() {
       return;
     }
     
-    try {
-      // 선택 범위 정보 가져오기
-      const range = selection.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      
-      // 번역 버튼 표시
-      showTranslateButton(rect.left, rect.bottom + 5);
-    } catch (e) {
-      console.error('선택 범위 정보를 가져오는 중 오류 발생:', e);
-    }
+    // 버튼 표시 로직 제거 (mouseup에서만 버튼 표시)
   }, 300); // 300ms 지연 (드래그 중 과도한 업데이트 방지)
 });
 

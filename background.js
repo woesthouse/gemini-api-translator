@@ -139,7 +139,8 @@ async function handleTranslateRequest(message) {
 
 // Gemini API를 사용하여 번역
 async function translateWithGemini(apiKey, modelName, systemPrompt, text, temperature, topK, topP) {
-  const apiUrl = `https://generativelanguage.googleapis.com/v2/models/${modelName}:generateContent?key=${apiKey}`;
+  // API URL을 v1beta로 변경 (v2가 아닌)
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
   
   const requestData = {
     contents: [
@@ -161,26 +162,54 @@ async function translateWithGemini(apiKey, modelName, systemPrompt, text, temper
     }
   };
   
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(requestData)
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(`API 오류: ${errorData.error.message}`);
+  try {
+    console.log(`API 요청 URL: ${apiUrl}`);
+    console.log('요청 데이터:', JSON.stringify(requestData, null, 2));
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestData)
+    });
+    
+    const responseText = await response.text();
+    console.log('API 응답 텍스트:', responseText);
+    
+    if (!response.ok) {
+      try {
+        const errorData = JSON.parse(responseText);
+        throw new Error(`API 오류: ${errorData.error ? errorData.error.message : '알 수 없는 오류'}`);
+      } catch (parseErr) {
+        throw new Error(`API 오류: ${response.status} - ${responseText || '응답 내용 없음'}`);
+      }
+    }
+    
+    if (!responseText) {
+      throw new Error('API에서 빈 응답이 반환되었습니다.');
+    }
+    
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseErr) {
+      throw new Error(`JSON 파싱 오류: ${parseErr.message} - 받은 데이터: ${responseText.substring(0, 100)}...`);
+    }
+    
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('API 응답에 번역 결과가 없습니다.');
+    }
+    
+    if (!data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
+      throw new Error('API 응답 형식이 예상과 다릅니다.');
+    }
+    
+    return data.candidates[0].content.parts[0].text;
+  } catch (error) {
+    console.error('API 호출 오류:', error);
+    throw error;
   }
-  
-  const data = await response.json();
-  
-  if (!data.candidates || data.candidates.length === 0) {
-    throw new Error('응답이 없습니다.');
-  }
-  
-  return data.candidates[0].content.parts[0].text;
 }
 
 // 언어 코드에 해당하는 언어 이름 반환 함수
