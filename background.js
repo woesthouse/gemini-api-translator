@@ -1,10 +1,17 @@
 // 확장프로그램 설치 또는 업데이트 시 실행
 browser.runtime.onInstalled.addListener(() => {
-    // 컨텍스트 메뉴 생성
+    // 번역 컨텍스트 메뉴 생성
     browser.contextMenus.create({
         id: "translate-selection",
         title: "선택한 텍스트 번역하기",
         contexts: ["selection"]
+    });
+    
+    // 설정 페이지 컨텍스트 메뉴 생성
+    browser.contextMenus.create({
+        id: "open-settings",
+        title: "Gemini 번역기 설정",
+        contexts: ["browser_action"]
     });
 
     // 기본 모델 설정 (새로 설치한 경우)
@@ -28,6 +35,9 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
                 text: info.selectionText
             });
         }
+    } else if (info.menuItemId === "open-settings") {
+        // 설정 페이지 열기
+        browser.runtime.openOptionsPage();
     }
 });
 
@@ -36,7 +46,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // API 번역 요청 처리
     if (message.action === "translateText") {
         const modelName = message.modelName || null;
-
+        
         // 모델 이름이 없는 경우 저장된 모델 확인
         if (!modelName) {
             browser.storage.local.get('geminiModel').then(result => {
@@ -61,6 +71,22 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         return true; // 비동기 응답을 위해 true 반환
     }
+    
+    // 옵션 페이지로부터 기본 프롬프트 요청 처리
+    if (message.action === "requestDefaultSystemPrompt") {
+        browser.runtime.sendMessage({ action: "getDefaultSystemPrompt" })
+            .then(response => {
+                if (response && response.defaultSystemPrompt) {
+                    sendResponse({ success: true, defaultSystemPrompt: response.defaultSystemPrompt });
+                } else {
+                    sendResponse({ success: false, error: "기본 프롬프트를 가져올 수 없습니다." });
+                }
+            })
+            .catch(error => {
+                sendResponse({ success: false, error: error.message });
+            });
+        return true;
+    }
 });
 
 // Gemini API를 사용한 번역 함수
@@ -69,52 +95,58 @@ async function translateWithGemini(text, sourceLanguage, targetLanguage, apiKey,
     const model = modelName || "gemini-2.0-pro-exp-02-05";
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    // 설정 가져오기
-    const settings = await browser.storage.local.get([
-        'useDetailedPrompt',
-        'currentPreset',
-        'customPrompt1',
-        'customPrompt2',
-        'customPrompt3'
-    ]);
-
-    // 시스템 프롬프트 설정 확인
-    const useDetailedPrompt = settings.useDetailedPrompt !== undefined ? settings.useDetailedPrompt : true; // 기본값은 true
-
-    // 현재 선택된 프리셋 확인
-    const currentPreset = settings.currentPreset || 1;
-    const customPromptKey = `customPrompt${currentPreset}`;
-    const customPrompt = settings[customPromptKey];
-
-    // 기본 프롬프트
-    let prompt = `다음 ${sourceLanguage !== 'auto' ? getLanguageName(sourceLanguage) + ' ' : ''}텍스트를 ${getLanguageName(targetLanguage)}로 번역해주세요.`;
-
-    // 시스템 프롬프트 추가 여부 확인
-    if (useDetailedPrompt) {
-        prompt += `
-오직 입력된 텍스트만 번역하고, 번역된 텍스트만 출력해주세요.
-여러 번역 결과를 제시하지 말고 하나의 최적 번역만 제공해주세요.
-마크다운 형식이나 추가 설명 없이 일반 텍스트로만 응답해주세요.
-따옴표나 괄호 등 원본에 없는 기호를 추가하지 마세요.
-입력된 텍스트에 단어와 문장이 함께 있을 경우에 메타 정보를 추가하지 마세요.
-텍스트의 모든 부분을 동일한 방식으로 처리하고, 특정 부분에 특별한 표시나 주석을 추가하지 마세요.
-번역 외의 다른 말을 하지 마세요. 번역만 해주세요.`;
+    // 저장된 프롬프트 설정 가져오기
+    const settings = await browser.storage.local.get(['systemPrompt', 'userPrompt']);
+    
+    // 프롬프트가 없을 경우 options.js로 기본값 저장 요청
+    if (!settings.systemPrompt) {
+        // 백그라운드에서 옵션 페이지의 기본값을 요청
+        browser.runtime.sendMessage({ action: "getDefaultSystemPrompt" })
+            .then(response => {
+                if (response && response.defaultSystemPrompt) {
+                    browser.storage.local.set({ systemPrompt: response.defaultSystemPrompt });
+                }
+            })
+            .catch(error => {
+                console.log("기본 프롬프트를 가져올 수 없습니다:", error);
+            });
     }
-
-    // 사용자 설정 프롬프트 추가
-    if (customPrompt && customPrompt.trim() !== '') {
-        prompt += `\n${customPrompt}`;
+    
+    // 프롬프트 구성
+    let promptBase = settings.systemPrompt || "다음 텍스트를 번역해주세요.";
+    
+    // 언어 정보 추가
+    let languageInfo = "";
+    if (sourceLanguage !== 'auto') {
+        languageInfo = `다음 ${getLanguageName(sourceLanguage)} 텍스트를 ${getLanguageName(targetLanguage)}로 번역`;
+    } else {
+        languageInfo = `다음 텍스트를 ${getLanguageName(targetLanguage)}로 번역`;
     }
-
-    // 텍스트 추가
-    prompt += `\n\n${text}`;
-
+    
+    // 프롬프트에 이미 언어 정보가 포함되어 있지 않은 경우에만 추가
+    if (!promptBase.includes(getLanguageName(targetLanguage))) {
+        promptBase = languageInfo + promptBase.substring(promptBase.indexOf("해주세요"));
+    }
+    
+    // 사용자 정의 프롬프트 추가
+    let finalPrompt = promptBase;
+    if (settings.userPrompt) {
+        finalPrompt += `\n\n${settings.userPrompt}`;
+    }
+    
+    // 번역할 텍스트 추가
+    finalPrompt += `\n\n${text}`;
+    
     const requestBody = {
-        contents: [{
-            parts: [{
-                text: prompt
-            }]
-        }],
+        contents: [
+            {
+                parts: [
+                    {
+                        text: finalPrompt
+                    }
+                ]
+            }
+        ],
         generationConfig: {
             temperature: 0.1,
             topP: 0.8,
@@ -154,10 +186,7 @@ function getLanguageName(langCode) {
         'ko': '한국어',
         'en': '영어',
         'ja': '일본어',
-        'zh': '중국어',
-        'es': '스페인어',
-        'fr': '프랑스어',
-        'de': '독일어'
+        'zh': '중국어'
     };
     return languages[langCode] || langCode;
 }

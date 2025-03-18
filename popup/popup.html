@@ -26,9 +26,6 @@
         <option value="en">영어</option>
         <option value="ja">일본어</option>
         <option value="zh">중국어</option>
-        <option value="es">스페인어</option>
-        <option value="fr">프랑스어</option>
-        <option value="de">독일어</option>
       </select>
         </div>
 
@@ -39,9 +36,6 @@
         <option value="en">영어</option>
         <option value="ja">일본어</option>
         <option value="zh">중국어</option>
-        <option value="es">스페인어</option>
-        <option value="fr">프랑스어</option>
-        <option value="de">독일어</option>
       </select>
         </div>
 
@@ -56,47 +50,10 @@
             <label for="translatedText">번역된 텍스트:</label>
             <textarea id="translatedText" rows="5" readonly></textarea>
         </div>
-
-        <div class="api-key-section">
-            <div class="api-key-container">
-                <label for="apiKey">Gemini API 키:</label>
-                <div class="input-button-group">
-                    <input type="password" id="apiKey" placeholder="API 키를 입력하세요">
-                    <div class="key-buttons">
-                        <button id="saveApiKey">저장</button>
-                        <button id="deleteApiKey">삭제</button>
-                    </div>
-                </div>
-                <div id="apiKeyStatus"></div>
-            </div>
-        </div>
-
-        <div class="form-group prompt-option">
-            <div class="api-key-container">
-                <label class="checkbox-label">
-                    <span>시스템 프롬프트 적용</span>
-                    <input type="checkbox" id="useDetailedPrompt" checked>
-                </label>
-                <div id="promptStatus"></div>
-            </div>
-        </div>
-
-        <!-- 사용자 설정 프롬프트 섹션 추가 -->
-        <div class="form-group custom-prompt-section">
-            <div class="section-header">
-                <span>사용자 설정 프롬프트</span>
-                <div class="preset-buttons">
-                    <button class="preset-btn" id="preset1">1</button>
-                    <button class="preset-btn" id="preset2">2</button>
-                    <button class="preset-btn" id="preset3">3</button>
-                </div>
-            </div>
-            <textarea id="customPrompt" rows="3" placeholder="여기에 원하는 프롬프트 설정을 입력하세요..."></textarea>
-            <div id="customPromptStatus"></div>
-            <div class="button-container">
-                <button id="saveCustomPrompt">저장</button>
-                <button id="deleteCustomPrompt" class="delete-btn">삭제</button>
-            </div>
+        
+        <div class="settings-button-container">
+            <button id="openSettings">고급 설정</button>
+            <div class="info-text">API 키, 프롬프트 설정 등을 변경할 수 있습니다.</div>
         </div>
     </div>
 
