@@ -180,29 +180,45 @@ async function translateWithGemini(apiKey, modelName, systemPrompt, text, temper
     if (!response.ok) {
       try {
         const errorData = JSON.parse(responseText);
-        throw new Error(`API 오류: ${errorData.error ? errorData.error.message : '알 수 없는 오류'}`);
+        
+        // API 키 오류인 경우 사용자 친화적인 메시지 반환
+        if (errorData.error && errorData.error.code === 400 && 
+            errorData.error.message && errorData.error.message.includes("API key not valid")) {
+          throw new Error("API 키가 유효하지 않습니다. 올바른 API 키를 입력해주세요.");
+        }
+        
+        // 다른 API 오류의 경우에도 사용자 친화적인 메시지로 변환
+        if (errorData.error && errorData.error.message) {
+          throw new Error(`API 오류: ${errorData.error.message}`);
+        }
+        
+        throw new Error(`API 오류가 발생했습니다 (${response.status})`);
       } catch (parseErr) {
-        throw new Error(`API 오류: ${response.status} - ${responseText || '응답 내용 없음'}`);
+        if (parseErr.message.includes("API 키가 유효하지 않습니다") || 
+            parseErr.message.includes("API 오류:")) {
+          throw parseErr;
+        }
+        throw new Error(`API 오류: ${response.status}번 오류가 발생했습니다`);
       }
     }
     
     if (!responseText) {
-      throw new Error('API에서 빈 응답이 반환되었습니다.');
+      throw new Error('API에서 응답이 없습니다. 나중에 다시 시도해주세요.');
     }
     
     let data;
     try {
       data = JSON.parse(responseText);
     } catch (parseErr) {
-      throw new Error(`JSON 파싱 오류: ${parseErr.message} - 받은 데이터: ${responseText.substring(0, 100)}...`);
+      throw new Error(`응답 형식 오류: 올바른 데이터를 받지 못했습니다. 나중에 다시 시도해주세요.`);
     }
     
     if (!data.candidates || data.candidates.length === 0) {
-      throw new Error('API 응답에 번역 결과가 없습니다.');
+      throw new Error('번역 결과를 생성하지 못했습니다. 다른 텍스트로 시도해보세요.');
     }
     
     if (!data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
-      throw new Error('API 응답 형식이 예상과 다릅니다.');
+      throw new Error('번역 결과가 올바른 형식이 아닙니다. 다시 시도해주세요.');
     }
     
     return data.candidates[0].content.parts[0].text;
@@ -216,7 +232,7 @@ async function translateWithGemini(apiKey, modelName, systemPrompt, text, temper
 function getLanguageName(langCode) {
     const languages = {
         'auto': '자동 감지',
-        'ko': '한국어',
+        'ko': '한국어', 
         'en': '영어',
         'ja': '일본어',
         'zh': '중국어'
