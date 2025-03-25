@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
     "name": "Gemini 번역기",
-    "version": "1.5",
+    "version": "1.6",
     "description": "Google Gemini API를 사용한 텍스트 번역 확장프로그램",
     "icons": {
         "48": "icons/languages.png",

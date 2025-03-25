@@ -283,8 +283,8 @@ function createTranslateButton() {
     background-color: #4285f4;
     color: white;
     border-radius: 4px;
-    padding: 8px 14px;
-    font-size: 13px;
+    padding: 4px 6px;
+    font-size: 12px;
     font-weight: bold;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     cursor: pointer;
@@ -295,7 +295,7 @@ function createTranslateButton() {
     user-select: none;
     border: 1px solid rgba(0,0,0,0.1);
   `;
-    translateButton.textContent = '번역하기';
+    translateButton.textContent = '번역';
 
     document.body.appendChild(translateButton);
 
