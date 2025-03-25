@@ -346,3 +346,88 @@ button:hover {
     margin-top: 8px;
     text-align: center;
 }
+
+/* 복사 버튼 스타일 */
+.button-row {
+    display: none;
+}
+
+#translatedText {
+    width: 100%;
+    resize: vertical;
+}
+
+/* 토스트 메시지 스타일 */
+.toast-message {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 9999;
+    animation: fadeInOut 1.5s ease;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* 번역된 텍스트 컨테이너 스타일 */
+.translated-text-container {
+    width: 100%;
+}
+
+/* 라벨과 버튼 컨테이너 스타일 */
+.label-with-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.label-with-button label {
+    margin-bottom: 0;
+}
+
+/* 복사 버튼 스타일 */
+#copyBtn {
+    width: 28px;
+    height: 28px;
+    min-width: unset;
+    background-color: white;
+    color: #555;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    padding: 0;
+    margin: 0;
+}
+
+#copyBtn svg {
+    width: 16px;
+    height: 16px;
+}
+
+#copyBtn:hover {
+    background-color: #f0f0f0;
+}
+
+#copyBtn:active {
+    transform: scale(0.95);
+}
+
+/* 사용하지 않는 스타일 제거 */
+.text-with-button {
+    display: none;
+}

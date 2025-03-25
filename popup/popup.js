@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const translatedTextArea = document.getElementById('translatedText');
     const translateBtn = document.getElementById('translateBtn');
     const openSettingsBtn = document.getElementById('openSettings');
+    const copyBtn = document.getElementById('copyBtn');
 
     // API 키, 모델, 언어 설정 불러오기
     browser.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage']).then(result => {
@@ -89,6 +90,47 @@ document.addEventListener('DOMContentLoaded', function() {
             translateBtn.disabled = false;
         }
     });
+
+    // 복사 버튼 클릭 이벤트
+    copyBtn.addEventListener('click', function() {
+        const translatedText = translatedTextArea.value.trim();
+        if (!translatedText) {
+            showToast('복사할 내용이 없습니다.');
+            return;
+        }
+
+        // 번역된 텍스트를 클립보드에 복사
+        navigator.clipboard.writeText(translatedText)
+            .then(() => {
+                showToast('번역 결과가 클립보드에 복사되었습니다.');
+            })
+            .catch(err => {
+                console.error('클립보드 복사 실패:', err);
+                showToast('복사에 실패했습니다.');
+            });
+    });
+
+    // 토스트 메시지 표시 함수
+    function showToast(message) {
+        // 기존 토스트 제거
+        const existingToast = document.querySelector('.toast-message');
+        if (existingToast) {
+            document.body.removeChild(existingToast);
+        }
+
+        // 새 토스트 생성
+        const toast = document.createElement('div');
+        toast.className = 'toast-message';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        // 1.5초 후 자동 제거
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 1500);
+    }
 
     // 텍스트 번역 함수
     async function translateText(text, sourceLanguage, targetLanguage, apiKey, modelName) {

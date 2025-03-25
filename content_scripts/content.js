@@ -60,14 +60,29 @@ function createTranslationPopup() {
         font-weight: bold;
         color: #4285f4;
       ">모델 로딩 중...</div>
-      <button id="gemini-close-btn" style="
-        background: none;
-        border: none;
-        font-size: 20px;
-        cursor: pointer;
-        color: #666;
-        padding: 0 5px;
-      ">×</button>
+      <div style="display: flex; gap: 10px;">
+        <button id="gemini-copy-btn" style="
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #666;
+          padding: 0 5px;
+          margin-top: 8px;
+        " title="번역 결과 복사">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+        </button>
+        <button id="gemini-close-btn" style="
+          background: none;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: #666;
+          padding: 0 5px;
+        ">×</button>
+      </div>
     </div>
     <div id="gemini-translation-content" style="
       white-space: pre-wrap;
@@ -91,6 +106,28 @@ function createTranslationPopup() {
     const headerTitle = popup.querySelector('#gemini-header-title');
     if (headerTitle) {
       headerTitle.textContent = modelDisplay;
+    }
+  });
+  
+  // 복사 버튼 기능 추가
+  const copyBtn = popup.querySelector('#gemini-copy-btn');
+  copyBtn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const content = popup.querySelector('#gemini-translation-content');
+    if (content && content.textContent.trim()) {
+      // 번역된 텍스트를 클립보드에 복사
+      navigator.clipboard.writeText(content.textContent)
+        .then(() => {
+          showToast('번역 결과가 클립보드에 복사되었습니다.');
+        })
+        .catch(err => {
+          console.error('클립보드 복사 실패:', err);
+          showToast('복사에 실패했습니다.');
+        });
+    } else {
+      showToast('복사할 내용이 없습니다.');
     }
   });
   
@@ -440,6 +477,41 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// 토스트 메시지 표시 함수
+function showToast(message) {
+  // 기존 토스트 제거
+  const existingToast = document.querySelector('.gemini-toast-message');
+  if (existingToast) {
+    document.body.removeChild(existingToast);
+  }
+
+  // 새 토스트 생성
+  const toast = document.createElement('div');
+  toast.className = 'gemini-toast-message';
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 99999;
+    animation: geminiToastFadeInOut 1.5s ease;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+
+  // 1.5초 후 자동 제거
+  setTimeout(() => {
+    if (document.body.contains(toast)) {
+      document.body.removeChild(toast);
+    }
+  }, 1500);
+}
+
 // CSS 스타일 추가
 function addStyles() {
   const style = document.createElement('style');
@@ -457,7 +529,7 @@ function addStyles() {
       background-color: #f0f0f0 !important;
     }
     
-    #gemini-close-btn:hover {
+    #gemini-close-btn:hover, #gemini-copy-btn:hover {
       color: #4285f4 !important;
     }
     
@@ -477,6 +549,13 @@ function addStyles() {
     
     #gemini-translate-button:active {
       transform: scale(0.95);
+    }
+    
+    @keyframes geminiToastFadeInOut {
+      0% { opacity: 0; }
+      20% { opacity: 1; }
+      80% { opacity: 1; }
+      100% { opacity: 0; }
     }
   `;
   document.head.appendChild(style);
