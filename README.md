@@ -52,3 +52,8 @@ Google Gemini API를 사용한 텍스트 번역 파이어폭스 확장 프로그
 ## 라이선스
 
 MIT License 
+
+## 외부 API 라이선스
+
+- 이 확장 프로그램은 Google Gemini API를 사용합니다. Google Gemini API 사용에는 Google Cloud Platform 서비스 약관 및 Google의 AI 원칙이 적용됩니다.
+- Gemini API 사용에 대한 자세한 라이센스 정보는 [Google AI Studio 이용약관](https://ai.google.dev/terms)을 참조하십시오. 
