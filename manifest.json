@@ -4,8 +4,8 @@
     "version": "1.7",
     "description": "Google Gemini API를 사용한 텍스트 번역 확장프로그램",
     "icons": {
-        "48": "icons/languages.png",
-        "96": "icons/languages.png"
+        "48": "icons/한영파일48.png",
+        "96": "icons/한영파일96.png"
     },
     "permissions": [
         "activeTab",
@@ -14,7 +14,7 @@
         "<all_urls>"
     ],
     "browser_action": {
-        "default_icon": "icons/languages.png",
+        "default_icon": "icons/한영파일48.png",
         "default_title": "Gemini 번역기",
         "default_popup": "popup/popup.html"
     },
