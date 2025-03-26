@@ -1,0 +1,433 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    width: 400px;
+    padding: 0;
+    background-color: #f9f9f9;
+    margin: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.container {
+    background-color: white;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    margin: 15px auto 15px auto;
+    box-sizing: border-box;
+}
+
+h1 {
+    text-align: center;
+    color: #4285f4;
+    font-size: 22px;
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #333;
+}
+
+select,
+textarea,
+input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+textarea {
+    resize: vertical;
+}
+
+button {
+    background-color: #4285f4;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-bottom: 15px;
+    width: 100%;
+    transition: background-color 0.2s;
+    box-sizing: border-box;
+}
+
+button:hover {
+    background-color: #3367d6;
+}
+
+.api-key-section {
+    margin-top: 20px;
+}
+
+.api-key-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.input-button-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.input-button-group input {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+
+/* 버튼 그룹 스타일링 */
+
+.key-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+}
+
+
+/* 모든 키 버튼에 대한 공통 스타일 */
+
+.key-buttons button {
+    width: 60px;
+    height: 36px;
+    /* 고정 높이 설정 */
+    padding: 0;
+    /* 패딩 제거 */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    /* 폰트 크기 통일 */
+    text-align: center;
+    margin: 0;
+    /* 마진 제거 */
+}
+
+#saveApiKey {
+    background-color: #4285F4;
+    color: white;
+}
+
+#deleteApiKey {
+    background-color: #ea4335;
+    color: white;
+}
+
+#apiKeyStatus,
+#promptStatus,
+#customPromptStatus {
+    margin-top: 5px;
+    font-size: 12px;
+    color: #0f9d58;
+}
+
+
+/* 프롬프트 상태 메시지 스타일 */
+
+#promptStatus,
+#customPromptStatus {
+    padding-left: 0;
+    /* 패딩 제거 */
+}
+
+.success {
+    color: green;
+}
+
+.error {
+    color: red;
+}
+
+
+/* 체크박스 라벨 스타일 */
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    font-weight: normal;
+    white-space: nowrap;
+    height: 20px;
+    padding: 0;
+    margin-bottom: 2px;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-left: 8px;
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    position: relative;
+    top: 0px;
+}
+
+.checkbox-label span {
+    font-size: 14px;
+    color: #555;
+    line-height: 24px;
+    display: inline-block;
+}
+
+
+/* 맨 아래 위치한 프롬프트 옵션 스타일 */
+
+.prompt-option {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-top: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 20px;
+    box-sizing: border-box;
+}
+
+
+/* 사용자 설정 프롬프트 섹션 */
+
+.custom-prompt-section {
+    margin-top: 10px;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    box-sizing: border-box;
+    width: 100%;
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.preset-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.preset-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    background-color: #f0f0f0;
+    color: #333;
+    font-weight: bold;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
+.preset-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.preset-btn.active {
+    background-color: #4285F4;
+    color: white;
+    border-color: #4285F4;
+}
+
+#customPrompt {
+    width: 100%;
+    resize: vertical;
+    min-height: 60px;
+    margin-bottom: 8px;
+    border: 1px solid #ddd;
+    padding: 8px;
+    font-size: 13px;
+    border-radius: 4px;
+}
+
+#saveCustomPrompt,
+#deleteCustomPrompt {
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    border: none;
+    margin-top: 5px;
+    width: auto;
+    max-width: 100px;
+}
+
+#saveCustomPrompt {
+    background-color: #4285F4;
+    color: white;
+}
+
+#saveCustomPrompt:hover {
+    background-color: #3367d6;
+}
+
+#deleteCustomPrompt {
+    background-color: #ea4335;
+    color: white;
+    margin-left: 8px;
+}
+
+#deleteCustomPrompt:hover {
+    background-color: #d62516;
+}
+
+.button-container {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 0;
+    margin-bottom: 3px;
+}
+
+#customPromptStatus {
+    margin-top: 0;
+    width: 100%;
+    text-align: left;
+    margin-bottom: 8px;
+    color: #0f9d58;
+    font-size: 12px;
+    padding-left: 0;
+}
+
+/* 설정 버튼 컨테이너 */
+.settings-button-container {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    text-align: center;
+}
+
+/* 설정 버튼 */
+#openSettings {
+    background-color: #f1f1f1;
+    color: #333;
+    border: 1px solid #ddd;
+    width: auto;
+    margin: 0 auto;
+    font-weight: normal;
+    font-size: 14px;
+    padding: 8px 16px;
+}
+
+#openSettings:hover {
+    background-color: #e5e5e5;
+}
+
+/* 설명 텍스트 */
+.info-text {
+    font-size: 12px;
+    color: #666;
+    margin-top: 8px;
+    text-align: center;
+}
+
+/* 복사 버튼 스타일 */
+.button-row {
+    display: none;
+}
+
+#translatedText {
+    width: 100%;
+    resize: vertical;
+}
+
+/* 토스트 메시지 스타일 */
+.toast-message {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 9999;
+    animation: fadeInOut 1.5s ease;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* 번역된 텍스트 컨테이너 스타일 */
+.translated-text-container {
+    width: 100%;
+}
+
+/* 라벨과 버튼 컨테이너 스타일 */
+.label-with-button {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.label-with-button label {
+    margin-bottom: 0;
+}
+
+/* 복사 버튼 스타일 */
+#copyBtn {
+    width: 28px;
+    height: 28px;
+    min-width: unset;
+    background-color: white;
+    color: #555;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+    padding: 0;
+    margin: 0;
+}
+
+#copyBtn svg {
+    width: 16px;
+    height: 16px;
+}
+
+#copyBtn:hover {
+    background-color: #f0f0f0;
+}
+
+#copyBtn:active {
+    transform: scale(0.95);
+}
+
+/* 사용하지 않는 스타일 제거 */
+.text-with-button {
+    display: none;
+}

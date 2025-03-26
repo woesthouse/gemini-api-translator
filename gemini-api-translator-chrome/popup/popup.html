@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Gemini 번역기</h1>
+
+        <div class="form-group">
+            <label for="geminiModel">모델 선택</label>
+            <select id="geminiModel">
+                <option value="gemini-2.5-pro-exp-03-25">Gemini 2.5 Pro</option>
+                <option value="gemini-2.0-pro-exp-02-05">Gemini 2.0 Pro</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini 2.0 Flash Thinking</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="sourceLanguage">원본 언어</label>
+            <select id="sourceLanguage">
+                <option value="auto">자동 감지</option>
+                <option value="ko">한국어</option>
+                <option value="en">영어</option>
+                <option value="ja">일본어</option>
+                <option value="zh">중국어</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="targetLanguage">목표 언어</label>
+            <select id="targetLanguage">
+                <option value="ko" selected>한국어</option>
+                <option value="en">영어</option>
+                <option value="ja">일본어</option>
+                <option value="zh">중국어</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="sourceText">번역할 텍스트</label>
+            <textarea id="sourceText" rows="5" placeholder="번역할 텍스트를 입력하세요..."></textarea>
+        </div>
+
+        <button id="translateBtn">번역하기</button>
+
+        <div class="form-group">
+            <div class="translated-text-container">
+                <div class="label-with-button">
+                    <label for="translatedText">번역된 텍스트</label>
+                    <button id="copyBtn" title="번역 결과 복사">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
+                </div>
+                <textarea id="translatedText" rows="5" readonly></textarea>
+            </div>
+        </div>
+
+        <div class="settings-button-container">
+            <button id="openSettings">고급 설정</button>
+            <div class="info-text">API 키, 프롬프트 설정 등을 변경할 수 있습니다.</div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>
