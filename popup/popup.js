@@ -9,13 +9,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const copyBtn = document.getElementById('copyBtn');
 
     // API 키, 모델, 언어 설정 불러오기
-    browser.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage']).then(result => {
+    chrome.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage'], result => {
         // 모델 설정
         if (result.geminiModel) {
             geminiModelSelect.value = result.geminiModel;
         } else {
             // 기본값으로 첫 번째 모델 저장
-            browser.storage.local.set({ geminiModel: geminiModelSelect.value });
+            chrome.storage.local.set({ geminiModel: geminiModelSelect.value });
         }
         
         // 언어 설정
@@ -30,21 +30,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 모델 변경 시 저장
     geminiModelSelect.addEventListener('change', function() {
-        browser.storage.local.set({ geminiModel: geminiModelSelect.value }).then(() => {
+        chrome.storage.local.set({ geminiModel: geminiModelSelect.value }, () => {
             console.log('모델이 변경되었습니다:', geminiModelSelect.value);
         });
     });
     
     // 소스 언어 변경 시 저장
     sourceLanguageSelect.addEventListener('change', function() {
-        browser.storage.local.set({ sourceLanguage: sourceLanguageSelect.value }).then(() => {
+        chrome.storage.local.set({ sourceLanguage: sourceLanguageSelect.value }, () => {
             console.log('소스 언어가 변경되었습니다:', sourceLanguageSelect.value);
         });
     });
     
     // 대상 언어 변경 시 저장
     targetLanguageSelect.addEventListener('change', function() {
-        browser.storage.local.set({ targetLanguage: targetLanguageSelect.value }).then(() => {
+        chrome.storage.local.set({ targetLanguage: targetLanguageSelect.value }, () => {
             console.log('대상 언어가 변경되었습니다:', targetLanguageSelect.value);
         });
     });
@@ -52,9 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 설정 페이지 열기
     openSettingsBtn.addEventListener('click', function() {
         console.log('설정 페이지 열기 버튼 클릭됨');
-        browser.runtime.openOptionsPage().catch(error => {
-            console.error('설정 페이지를 열 수 없습니다:', error);
-        });
+        chrome.runtime.openOptionsPage();
     });
 
     // 번역 함수
@@ -66,29 +64,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // API 키 확인
-        const result = await browser.storage.local.get(['geminiApiKey', 'geminiModel']);
-        if (!result.geminiApiKey) {
-            translatedTextArea.value = 'Gemini API 키가 설정되지 않았습니다. 고급 설정에서 API 키를 설정해주세요.';
-            return;
-        }
+        chrome.storage.local.get(['geminiApiKey', 'geminiModel'], result => {
+            if (!result.geminiApiKey) {
+                translatedTextArea.value = 'Gemini API 키가 설정되지 않았습니다. 고급 설정에서 API 키를 설정해주세요.';
+                return;
+            }
 
-        const apiKey = result.geminiApiKey;
-        const modelName = result.geminiModel || geminiModelSelect.value;
-        const sourceLanguage = sourceLanguageSelect.value;
-        const targetLanguage = targetLanguageSelect.value;
+            const apiKey = result.geminiApiKey;
+            const modelName = result.geminiModel || geminiModelSelect.value;
+            const sourceLanguage = sourceLanguageSelect.value;
+            const targetLanguage = targetLanguageSelect.value;
 
-        // 번역 중 표시
-        translatedTextArea.value = '번역 중...';
-        translateBtn.disabled = true;
+            // 번역 중 표시
+            translatedTextArea.value = '번역 중...';
+            translateBtn.disabled = true;
 
-        try {
-            const response = await translateText(sourceText, sourceLanguage, targetLanguage, apiKey, modelName);
-            translatedTextArea.value = response;
-        } catch (error) {
-            translatedTextArea.value = `오류 발생: ${error.message}`;
-        } finally {
-            translateBtn.disabled = false;
-        }
+            // 번역 요청
+            translateText(sourceText, sourceLanguage, targetLanguage, apiKey, modelName)
+                .then(translatedText => {
+                    translatedTextArea.value = translatedText;
+                })
+                .catch(error => {
+                    translatedTextArea.value = `오류 발생: ${error.message}`;
+                })
+                .finally(() => {
+                    translateBtn.disabled = false;
+                });
+        });
     });
 
     // 복사 버튼 클릭 이벤트
@@ -147,21 +149,26 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // 번역 요청을 background로 보내기
         return new Promise((resolve, reject) => {
-            browser.runtime.sendMessage({
+            chrome.runtime.sendMessage({
                 action: "translateText",
                 text: text,
                 sourceLanguage: sourceLanguage,
                 targetLanguage: targetLanguage,
                 apiKey: apiKey,
                 modelName: model
-            }).then(response => {
-                if (response.success) {
-                    resolve(response.translatedText);
-                } else {
-                    reject(new Error(response.error));
+            }, response => {
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                    return;
                 }
-            }).catch(error => {
-                reject(error);
+                
+                if (response && response.success) {
+                    resolve(response.translatedText);
+                } else if (response && response.error) {
+                    reject(new Error(response.error));
+                } else {
+                    reject(new Error('알 수 없는 오류가 발생했습니다.'));
+                }
             });
         });
     }

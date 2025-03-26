@@ -1,23 +1,23 @@
 // 확장프로그램 설치 또는 업데이트 시 실행
-browser.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(() => {
     // 번역 컨텍스트 메뉴 생성
-    browser.contextMenus.create({
+    chrome.contextMenus.create({
         id: "translate-selection",
         title: "선택한 텍스트 번역하기",
         contexts: ["selection"]
     });
     
     // 설정 페이지 컨텍스트 메뉴 생성
-    browser.contextMenus.create({
+    chrome.contextMenus.create({
         id: "open-settings",
         title: "Gemini 번역기 설정",
-        contexts: ["browser_action"]
+        contexts: ["action"]
     });
 
     // 기본 모델 설정 (새로 설치한 경우)
-    browser.storage.local.get('geminiModel').then(result => {
+    chrome.storage.local.get('geminiModel', result => {
         if (!result.geminiModel) {
-            browser.storage.local.set({
+            chrome.storage.local.set({
                 geminiModel: "gemini-2.0-pro-exp-02-05"
             });
         }
@@ -25,31 +25,31 @@ browser.runtime.onInstalled.addListener(() => {
 });
 
 // 컨텍스트 메뉴 클릭 이벤트 처리
-browser.contextMenus.onClicked.addListener((info, tab) => {
+chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "translate-selection") {
         // 선택된 텍스트가 있는 경우
         if (info.selectionText) {
             // 선택된 텍스트를 번역하기 위해 content script에 메시지 전송
-            browser.tabs.sendMessage(tab.id, {
+            chrome.tabs.sendMessage(tab.id, {
                 action: "translateSelection",
                 text: info.selectionText
             });
         }
     } else if (info.menuItemId === "open-settings") {
         // 설정 페이지 열기
-        browser.runtime.openOptionsPage();
+        chrome.runtime.openOptionsPage();
     }
 });
 
 // 팝업에서 컨텐츠 스크립트로 메시지를 전달하는 통신 채널
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // API 번역 요청 처리
     if (message.action === "translateText") {
         const modelName = message.modelName || null;
         
         // 모델 이름이 없는 경우 저장된 모델 확인
         if (!modelName) {
-            browser.storage.local.get('geminiModel').then(result => {
+            chrome.storage.local.get('geminiModel', result => {
                 const model = result.geminiModel || "gemini-2.0-pro-exp-02-05";
                 handleTranslateRequest(message)
                     .then(result => {
@@ -74,7 +74,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     // 옵션 페이지로부터 기본 프롬프트 요청 처리
     if (message.action === "requestDefaultSystemPrompt") {
-        browser.runtime.sendMessage({ action: "getDefaultSystemPrompt" })
+        chrome.runtime.sendMessage({ action: "getDefaultSystemPrompt" })
             .then(response => {
                 if (response && response.defaultSystemPrompt) {
                     sendResponse({ success: true, defaultSystemPrompt: response.defaultSystemPrompt });
@@ -95,7 +95,9 @@ async function handleTranslateRequest(message) {
     const { text, sourceLanguage, targetLanguage, apiKey, modelName } = message;
     
     // 저장된 매개변수 불러오기
-    const result = await browser.storage.local.get(['systemPrompt', 'parameters']);
+    const result = await new Promise(resolve => {
+      chrome.storage.local.get(['systemPrompt', 'parameters'], resolve);
+    });
     const parameters = result.parameters || { temperature: 0.7, topK: 40, topP: 0.95 };
     
     // 시스템 프롬프트 설정
@@ -200,44 +202,45 @@ async function translateWithGemini(apiKey, modelName, systemPrompt, text, temper
             parseErr.message.includes("API 오류:")) {
           throw parseErr;
         }
-        throw new Error(`API 오류: ${response.status}번 오류가 발생했습니다`);
+        throw new Error(`API 응답을 처리하는 중 오류가 발생했습니다: ${parseErr.message}`);
       }
     }
     
-    if (!responseText) {
-      throw new Error('API에서 응답이 없습니다. 나중에 다시 시도해주세요.');
-    }
-    
-    let data;
     try {
-      data = JSON.parse(responseText);
-    } catch (parseErr) {
-      throw new Error(`응답 형식 오류: 올바른 데이터를 받지 못했습니다. 나중에 다시 시도해주세요.`);
+      const responseData = JSON.parse(responseText);
+      
+      // 응답 구조 확인
+      if (responseData && 
+          responseData.candidates && 
+          responseData.candidates[0] && 
+          responseData.candidates[0].content && 
+          responseData.candidates[0].content.parts && 
+          responseData.candidates[0].content.parts[0] && 
+          responseData.candidates[0].content.parts[0].text) {
+        
+        // 번역된 텍스트 반환
+        return responseData.candidates[0].content.parts[0].text;
+      } else {
+        throw new Error("API 응답 형식이 예상과 다릅니다.");
+      }
+    } catch (error) {
+      console.error("API 응답 파싱 오류:", error);
+      throw new Error(`응답을 처리하는 중 오류가 발생했습니다: ${error.message}`);
     }
-    
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error('번역 결과를 생성하지 못했습니다. 다른 텍스트로 시도해보세요.');
-    }
-    
-    if (!data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
-      throw new Error('번역 결과가 올바른 형식이 아닙니다. 다시 시도해주세요.');
-    }
-    
-    return data.candidates[0].content.parts[0].text;
   } catch (error) {
-    console.error('API 호출 오류:', error);
+    console.error("API 요청 오류:", error);
     throw error;
   }
 }
 
 // 언어 코드에 해당하는 언어 이름 반환 함수
 function getLanguageName(langCode) {
-    const languages = {
-        'auto': '자동 감지',
-        'ko': '한국어', 
-        'en': '영어',
-        'ja': '일본어',
-        'zh': '중국어'
-    };
-    return languages[langCode] || langCode;
+  const languages = {
+    'auto': '자동 감지',
+    'ko': '한국어',
+    'en': '영어',
+    'ja': '일본어',
+    'zh': '중국어'
+  };
+  return languages[langCode] || langCode;
 }

@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function() {
 번역 외의 다른 말을 하지 마세요. 번역만 해주세요.`;
   
   // 다른 부분에서 기본 프롬프트 요청 시 응답하는 메시지 리스너
-  browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "getDefaultSystemPrompt") {
       sendResponse({ defaultSystemPrompt: defaultSystemPrompt });
       return true;
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
       topP: parseFloat(topPSlider.value)
     };
     
-    browser.storage.local.set({ parameters }).then(() => {
+    chrome.storage.local.set({ parameters }, () => {
       parametersStatus.textContent = '매개변수 설정이 저장되었습니다.';
       parametersStatus.className = 'status success';
       setTimeout(() => {
@@ -134,14 +134,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const data = {};
     data[promptKey] = promptValue;
     
-    browser.storage.local.set(data);
+    chrome.storage.local.set(data);
   }
   
   // 선택된 프롬프트 불러오기
   function loadSelectedPrompt() {
     const promptKey = `userPrompt${currentPromptNumber}`;
     
-    browser.storage.local.get([promptKey]).then(result => {
+    chrome.storage.local.get([promptKey], result => {
       if (result[promptKey] !== undefined) {
         userPromptInput.value = result[promptKey];
       } else {
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // 저장된 설정 불러오기
-  browser.storage.local.get([
+  chrome.storage.local.get([
     'geminiApiKey', 
     'systemPrompt', 
     'currentPromptNumber', 
@@ -161,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
     'userPrompt4', 
     'userPrompt5',
     'parameters'
-  ]).then(result => {
+  ], result => {
     // API 키 설정
     if (result.geminiApiKey) {
       apiKeyInput.value = result.geminiApiKey;
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       // 기본값 설정 및 저장
       systemPromptInput.value = defaultSystemPrompt;
-      browser.storage.local.set({ systemPrompt: defaultSystemPrompt });
+      chrome.storage.local.set({ systemPrompt: defaultSystemPrompt });
     }
     
     // 현재 선택된 프롬프트 번호 설정
@@ -207,102 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
         topPValue.textContent = result.parameters.topP;
       }
     } else {
-      // 기본값 설정 및 저장
-      browser.storage.local.set({ parameters: defaultParameters });
-    }
-  });
-  
-  // API 키 저장
-  saveApiKeyBtn.addEventListener('click', function() {
-    const apiKey = apiKeyInput.value.trim();
-    if (apiKey) {
-      browser.storage.local.set({ geminiApiKey: apiKey }).then(() => {
-        apiKeyStatus.textContent = 'API 키가 저장되었습니다.';
-        apiKeyStatus.className = 'status success';
-        setTimeout(() => {
-          apiKeyStatus.textContent = '';
-          apiKeyStatus.className = 'status';
-        }, 3000);
-      });
-    } else {
-      apiKeyStatus.textContent = 'API 키를 입력해주세요.';
-      apiKeyStatus.className = 'status error';
-    }
-  });
-  
-  // API 키 삭제
-  deleteApiKeyBtn.addEventListener('click', function() {
-    // 사용자에게 확인 요청
-    if (confirm('정말 API 키를 삭제하시겠습니까?')) {
-      browser.storage.local.remove('geminiApiKey').then(() => {
-        apiKeyInput.value = ''; // 입력 필드 비우기
-        apiKeyStatus.textContent = 'API 키가 삭제되었습니다.';
-        apiKeyStatus.className = 'status success';
-        setTimeout(() => {
-          apiKeyStatus.textContent = '';
-          apiKeyStatus.className = 'status';
-        }, 3000);
-      }).catch(error => {
-        apiKeyStatus.textContent = `오류: ${error.message}`;
-        apiKeyStatus.className = 'status error';
-      });
-    }
-  });
-  
-  // 프롬프트 초기화 버튼
-  resetPromptsBtn.addEventListener('click', function() {
-    if (confirm('모든 프롬프트 설정을 초기화하시겠습니까?')) {
-      // 시스템 프롬프트를 기본값으로 설정
-      systemPromptInput.value = defaultSystemPrompt;
-      
-      // 현재 사용자 프롬프트 비우기
-      userPromptInput.value = '';
-      
-      // 모든 사용자 프롬프트와 시스템 프롬프트 초기화 (API 키는 유지)
-      browser.storage.local.get(['geminiApiKey', 'parameters']).then(result => {
-        const apiKey = result.geminiApiKey;
-        const parameters = result.parameters;
-        
-        // 스토리지 초기화
-        browser.storage.local.clear().then(() => {
-          // API 키 다시 저장
-          if (apiKey) {
-            browser.storage.local.set({ geminiApiKey: apiKey });
-          }
-          
-          // 매개변수 다시 저장
-          if (parameters) {
-            browser.storage.local.set({ parameters: parameters });
-          }
-          
-          // 기본 시스템 프롬프트 저장
-          browser.storage.local.set({ 
-            systemPrompt: defaultSystemPrompt,
-            currentPromptNumber: 1
-          });
-          
-          // 현재 프롬프트 번호 초기화
-          currentPromptNumber = 1;
-          
-          // 버튼 스타일 업데이트
-          updatePromptButtonStyles();
-          
-          // 성공 메시지
-          promptStatus.textContent = '프롬프트 설정이 초기화되었습니다.';
-          promptStatus.className = 'status success';
-          setTimeout(() => {
-            promptStatus.textContent = '';
-            promptStatus.className = 'status';
-          }, 3000);
-        });
-      });
-    }
-  });
-  
-  // 매개변수 초기화 버튼
-  resetParametersBtn.addEventListener('click', function() {
-    if (confirm('번역 매개변수를 기본값으로 초기화하시겠습니까?')) {
-      // 슬라이더를 기본값으로 설정
+      // 기본값 설정
       temperatureSlider.value = defaultParameters.temperature;
       temperatureValue.textContent = defaultParameters.temperature;
       
@@ -311,33 +216,63 @@ document.addEventListener('DOMContentLoaded', function() {
       
       topPSlider.value = defaultParameters.topP;
       topPValue.textContent = defaultParameters.topP;
-      
-      // 기본 매개변수 저장
-      browser.storage.local.set({ parameters: defaultParameters }).then(() => {
-        parametersStatus.textContent = '매개변수가 기본값으로 초기화되었습니다.';
-        parametersStatus.className = 'status success';
+    }
+  });
+  
+  // API 키 저장
+  saveApiKeyBtn.addEventListener('click', function() {
+    const apiKey = apiKeyInput.value.trim();
+    
+    if (!apiKey) {
+      apiKeyStatus.textContent = 'API 키를 입력해주세요.';
+      apiKeyStatus.className = 'status error';
+      return;
+    }
+    
+    chrome.storage.local.set({ geminiApiKey: apiKey }, () => {
+      apiKeyStatus.textContent = 'API 키가 저장되었습니다.';
+      apiKeyStatus.className = 'status success';
+      setTimeout(() => {
+        apiKeyStatus.textContent = '';
+        apiKeyStatus.className = 'status';
+      }, 3000);
+    });
+  });
+  
+  // API 키 삭제
+  deleteApiKeyBtn.addEventListener('click', function() {
+    if (confirm('API 키를 삭제하시겠습니까?')) {
+      chrome.storage.local.remove('geminiApiKey', () => {
+        apiKeyInput.value = '';
+        apiKeyStatus.textContent = 'API 키가 삭제되었습니다.';
+        apiKeyStatus.className = 'status success';
         setTimeout(() => {
-          parametersStatus.textContent = '';
-          parametersStatus.className = 'status';
+          apiKeyStatus.textContent = '';
+          apiKeyStatus.className = 'status';
         }, 3000);
       });
     }
   });
   
-  // 프롬프트 설정 저장
+  // 프롬프트 저장
   savePromptsBtn.addEventListener('click', function() {
     const systemPrompt = systemPromptInput.value.trim();
+    const userPrompt = userPromptInput.value.trim();
+    
+    if (!systemPrompt) {
+      promptStatus.textContent = '시스템 프롬프트를 입력해주세요.';
+      promptStatus.className = 'status error';
+      return;
+    }
     
     // 현재 프롬프트 저장
     saveCurrentPrompt();
     
-    // 시스템 프롬프트와 현재 프롬프트 번호 저장
-    const data = {
-      systemPrompt: systemPrompt,
-      currentPromptNumber: currentPromptNumber
-    };
-    
-    browser.storage.local.set(data).then(() => {
+    // 시스템 프롬프트 저장
+    chrome.storage.local.set({ 
+      systemPrompt,
+      currentPromptNumber 
+    }, () => {
       promptStatus.textContent = '프롬프트 설정이 저장되었습니다.';
       promptStatus.className = 'status success';
       setTimeout(() => {
@@ -347,142 +282,127 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // 설정 내보내기 버튼
+  // 프롬프트 초기화
+  resetPromptsBtn.addEventListener('click', function() {
+    if (confirm('프롬프트 설정을 기본값으로 초기화하시겠습니까?')) {
+      // 시스템 프롬프트 초기화
+      systemPromptInput.value = defaultSystemPrompt;
+      
+      // 저장
+      chrome.storage.local.set({ 
+        systemPrompt: defaultSystemPrompt 
+      }, () => {
+        promptStatus.textContent = '프롬프트 설정이 초기화되었습니다.';
+        promptStatus.className = 'status success';
+        setTimeout(() => {
+          promptStatus.textContent = '';
+          promptStatus.className = 'status';
+        }, 3000);
+      });
+    }
+  });
+  
+  // 매개변수 초기화
+  resetParametersBtn.addEventListener('click', function() {
+    if (confirm('매개변수 설정을 기본값으로 초기화하시겠습니까?')) {
+      // 슬라이더 값 초기화
+      temperatureSlider.value = defaultParameters.temperature;
+      temperatureValue.textContent = defaultParameters.temperature;
+      
+      topKSlider.value = defaultParameters.topK;
+      topKValue.textContent = defaultParameters.topK;
+      
+      topPSlider.value = defaultParameters.topP;
+      topPValue.textContent = defaultParameters.topP;
+      
+      // 저장
+      chrome.storage.local.set({ parameters: defaultParameters }, () => {
+        parametersStatus.textContent = '매개변수 설정이 초기화되었습니다.';
+        parametersStatus.className = 'status success';
+        setTimeout(() => {
+          parametersStatus.textContent = '';
+          parametersStatus.className = 'status';
+        }, 3000);
+      });
+    }
+  });
+  
+  // 모든 설정 내보내기
   exportSettingsBtn.addEventListener('click', function() {
-    // 모든 관련 설정 가져오기
-    browser.storage.local.get([
-      'geminiApiKey', 
-      'systemPrompt', 
-      'currentPromptNumber', 
-      'userPrompt1', 
-      'userPrompt2', 
-      'userPrompt3', 
-      'userPrompt4', 
-      'userPrompt5',
-      'parameters'
-    ]).then(result => {
+    chrome.storage.local.get(null, settings => {
+      // API 키 삭제 (보안을 위해)
+      delete settings.geminiApiKey;
+      
       // 설정을 JSON으로 변환
-      const settingsJson = JSON.stringify(result, null, 2);
+      const settingsJson = JSON.stringify(settings, null, 2);
       
       // 다운로드 링크 생성
       const blob = new Blob([settingsJson], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       
-      // 현재 날짜를 파일명에 추가
+      // 현재 날짜와 시간으로 파일명 생성
       const now = new Date();
-      const dateStr = now.toISOString().slice(0, 10);
-      const filename = `gemini_translator_settings_${dateStr}.json`;
+      const fileName = `gemini_translator_settings_${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}.json`;
       
       // 다운로드 링크 생성 및 클릭
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       
-      // 정리
+      // 링크 제거
       setTimeout(() => {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
-        // 성공 메시지
-        backupStatus.textContent = '설정이 성공적으로 내보내졌습니다.';
-        backupStatus.className = 'status success';
-        setTimeout(() => {
-          backupStatus.textContent = '';
-          backupStatus.className = 'status';
-        }, 3000);
-      }, 100);
-    }).catch(error => {
-      backupStatus.textContent = `오류: ${error.message}`;
-      backupStatus.className = 'status error';
+      }, 0);
+      
+      // 상태 업데이트
+      backupStatus.textContent = '설정이 내보내기되었습니다.';
+      backupStatus.className = 'status success';
+      setTimeout(() => {
+        backupStatus.textContent = '';
+        backupStatus.className = 'status';
+      }, 3000);
     });
   });
   
-  // 가져오기 버튼 -> 파일 선택 다이얼로그
+  // 모든 설정 가져오기
   importSettingsBtn.addEventListener('click', function() {
     importFileInput.click();
   });
   
-  // 파일 선택 후 처리
-  importFileInput.addEventListener('change', function(event) {
-    const file = event.target.files[0];
+  // 파일 선택 이벤트
+  importFileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
     if (!file) return;
     
     const reader = new FileReader();
-    
     reader.onload = function(e) {
       try {
         const settings = JSON.parse(e.target.result);
         
-        // 확인 메시지
-        if (confirm('설정을 가져오시겠습니까? 기존 설정이 덮어씌워집니다.')) {
-          // 설정 적용
-          browser.storage.local.set(settings).then(() => {
-            // UI 업데이트
-            if (settings.geminiApiKey) {
-              apiKeyInput.value = settings.geminiApiKey;
-            }
-            
-            if (settings.systemPrompt !== undefined) {
-              systemPromptInput.value = settings.systemPrompt;
-            }
-            
-            if (settings.currentPromptNumber) {
-              currentPromptNumber = settings.currentPromptNumber;
-            }
-            
-            // 프롬프트 불러오기
-            loadSelectedPrompt();
-            
-            // 버튼 스타일 업데이트
-            updatePromptButtonStyles();
-            
-            // 매개변수 설정 불러오기
-            if (settings.parameters) {
-              // 온도 설정
-              if (settings.parameters.temperature !== undefined) {
-                temperatureSlider.value = settings.parameters.temperature;
-                temperatureValue.textContent = settings.parameters.temperature;
-              }
-              
-              // Top K 설정
-              if (settings.parameters.topK !== undefined) {
-                topKSlider.value = settings.parameters.topK;
-                topKValue.textContent = settings.parameters.topK;
-              }
-              
-              // Top P 설정
-              if (settings.parameters.topP !== undefined) {
-                topPSlider.value = settings.parameters.topP;
-                topPValue.textContent = settings.parameters.topP;
-              }
-            }
-            
-            // 성공 메시지
-            backupStatus.textContent = '설정이 성공적으로 가져와졌습니다.';
-            backupStatus.className = 'status success';
-            setTimeout(() => {
-              backupStatus.textContent = '';
-              backupStatus.className = 'status';
-            }, 3000);
-          });
-        }
-      } catch (error) {
-        backupStatus.textContent = `오류: 잘못된 설정 파일입니다. ${error.message}`;
+        // API 키는 가져오지 않음
+        delete settings.geminiApiKey;
+        
+        // 설정 저장
+        chrome.storage.local.set(settings, () => {
+          // 설정 다시 로드
+          location.reload();
+          
+          // 상태 업데이트
+          backupStatus.textContent = '설정이 가져오기되었습니다.';
+          backupStatus.className = 'status success';
+        });
+      } catch (err) {
+        backupStatus.textContent = '설정 파일 형식이 올바르지 않습니다.';
         backupStatus.className = 'status error';
+        setTimeout(() => {
+          backupStatus.textContent = '';
+          backupStatus.className = 'status';
+        }, 3000);
       }
-      
-      // 파일 입력 초기화
-      importFileInput.value = '';
     };
-    
-    reader.onerror = function() {
-      backupStatus.textContent = '오류: 파일을 읽을 수 없습니다.';
-      backupStatus.className = 'status error';
-      importFileInput.value = '';
-    };
-    
     reader.readAsText(file);
   });
 }); 
