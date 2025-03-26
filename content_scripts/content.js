@@ -645,6 +645,7 @@ function addStyles() {
 // 모델 ID를 사용자 친화적인 이름으로 변환하는 함수
 function getModelDisplayName(modelName) {
     const modelDisplayNames = {
+        "gemini-2.5-pro-exp-03-25": "Gemini 2.5 Pro 번역",
         "gemini-2.0-pro-exp-02-05": "Gemini 2.0 Pro 번역",
         "gemini-2.0-flash": "Gemini 2.0 Flash 번역",
         "gemini-2.0-flash-thinking-exp-01-21": "Gemini 2.0 Flash Thinking 번역"
