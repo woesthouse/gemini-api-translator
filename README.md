@@ -22,8 +22,7 @@ Google Gemini API를 사용한 텍스트 번역 파이어폭스 확장 프로그
 2. 가장 최신버전의 xpi 파일을 다운받습니다.
 3. 파이어폭스 확장프로그램 설치를 허용합니다.
 
-또는 https://addons.mozilla.org/ko/firefox/addon/gemini-%EB%B2%88%EC%97%AD%EA%B8%B0/
-위 링크에서 공식 버전을 설치합니다.
+또는 https://addons.mozilla.org/ko/firefox/addon/gemini-%EB%B2%88%EC%97%AD%EA%B8%B0/ 링크에서 공식 버전을 설치합니다.
 
 ### 크롬
 1. zip 파일을 다운로드합니다.
@@ -33,8 +32,7 @@ Google Gemini API를 사용한 텍스트 번역 파이어폭스 확장 프로그
 5. "압축해제된 확장프로그램을 로드합니다" 버튼을 클릭합니다.
 6. 압축해제한 zip 폴더를 선택합니다
 
-또는 https://chromewebstore.google.com/detail/gemini-%EB%B2%88%EC%97%AD%E%B8%B0/ajmjlleknoioohncagooffoalbahbihe
-위 링크에서 공식 버전을 설치합니다.
+또는 https://chromewebstore.google.com/detail/gemini-%EB%B2%88%EC%97%AD%E%B8%B0/ajmjlleknoioohncagooffoalbahbihe 링크에서 공식 버전을 설치합니다.
 
 ## 사용 방법
 
