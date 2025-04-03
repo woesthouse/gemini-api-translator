@@ -9,13 +9,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const copyBtn = document.getElementById('copyBtn');
 
     // API 키, 모델, 언어 설정 불러오기
-    chrome.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage'], result => {
+    browser.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage']).then(result => {
         // 모델 설정
         if (result.geminiModel) {
             geminiModelSelect.value = result.geminiModel;
         } else {
             // 기본값으로 첫 번째 모델 저장
-            chrome.storage.local.set({ geminiModel: geminiModelSelect.value });
+            browser.storage.local.set({ geminiModel: geminiModelSelect.value });
         }
         
         // 언어 설정
@@ -30,21 +30,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 모델 변경 시 저장
     geminiModelSelect.addEventListener('change', function() {
-        chrome.storage.local.set({ geminiModel: geminiModelSelect.value }, () => {
+        browser.storage.local.set({ geminiModel: geminiModelSelect.value }).then(() => {
             console.log('모델이 변경되었습니다:', geminiModelSelect.value);
         });
     });
     
     // 소스 언어 변경 시 저장
     sourceLanguageSelect.addEventListener('change', function() {
-        chrome.storage.local.set({ sourceLanguage: sourceLanguageSelect.value }, () => {
+        browser.storage.local.set({ sourceLanguage: sourceLanguageSelect.value }).then(() => {
             console.log('소스 언어가 변경되었습니다:', sourceLanguageSelect.value);
         });
     });
     
     // 대상 언어 변경 시 저장
     targetLanguageSelect.addEventListener('change', function() {
-        chrome.storage.local.set({ targetLanguage: targetLanguageSelect.value }, () => {
+        browser.storage.local.set({ targetLanguage: targetLanguageSelect.value }).then(() => {
             console.log('대상 언어가 변경되었습니다:', targetLanguageSelect.value);
         });
     });
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 설정 페이지 열기
     openSettingsBtn.addEventListener('click', function() {
         console.log('설정 페이지 열기 버튼 클릭됨');
-        chrome.runtime.openOptionsPage();
+        browser.runtime.openOptionsPage();
     });
 
     // 번역 함수
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // API 키 확인
-        chrome.storage.local.get(['geminiApiKey', 'geminiModel'], result => {
+        browser.storage.local.get(['geminiApiKey', 'geminiModel']).then(result => {
             if (!result.geminiApiKey) {
                 translatedTextArea.value = 'Gemini API 키가 설정되지 않았습니다. 고급 설정에서 API 키를 설정해주세요.';
                 return;
@@ -145,31 +145,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // 모델 이름이 없는 경우 기본값 사용
-        const model = modelName || "gemini-2.0-pro-exp-02-05";
+        const model = modelName || "gemini-2.5-pro-exp-03-25";
         
         // 번역 요청을 background로 보내기
-        return new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage({
-                action: "translateText",
-                text: text,
-                sourceLanguage: sourceLanguage,
-                targetLanguage: targetLanguage,
-                apiKey: apiKey,
-                modelName: model
-            }, response => {
-                if (chrome.runtime.lastError) {
-                    reject(new Error(chrome.runtime.lastError.message));
-                    return;
-                }
-                
-                if (response && response.success) {
-                    resolve(response.translatedText);
-                } else if (response && response.error) {
-                    reject(new Error(response.error));
-                } else {
-                    reject(new Error('알 수 없는 오류가 발생했습니다.'));
-                }
-            });
+        return browser.runtime.sendMessage({
+            action: "translateText",
+            text: text,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            apiKey: apiKey,
+            modelName: model
         });
     }
 

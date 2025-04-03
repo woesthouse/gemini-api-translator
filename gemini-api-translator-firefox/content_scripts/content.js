@@ -15,8 +15,8 @@ function createTranslationPopup() {
     // 이미 존재하는 팝업이 있으면 재사용
     if (currentPopup && document.body.contains(currentPopup)) {
         // 모델 이름을 업데이트하기 위해 저장된 모델 정보를 가져옵니다
-        chrome.storage.local.get('geminiModel', result => {
-            const modelName = result.geminiModel || "gemini-2.0-pro-exp-02-05";
+        browser.storage.local.get('geminiModel').then(result => {
+            const modelName = result.geminiModel || "gemini-2.5-pro-exp-03-25";
             const modelDisplay = getModelDisplayName(modelName);
 
             // 헤더 타이틀 업데이트
@@ -112,8 +112,8 @@ function createTranslationPopup() {
     currentPopup = popup;
 
     // 현재 선택된 모델 정보 가져오기
-    chrome.storage.local.get('geminiModel', result => {
-        const modelName = result.geminiModel || "gemini-2.0-pro-exp-02-05";
+    browser.storage.local.get('geminiModel').then(result => {
+        const modelName = result.geminiModel || "gemini-2.5-pro-exp-03-25";
         const modelDisplay = getModelDisplayName(modelName);
 
         // 헤더 타이틀 업데이트
@@ -387,7 +387,7 @@ function translateSelectedText() {
     showTranslationPopup(selectedText, "번역 중...", rect.left, rect.bottom + 10);
 
     // API 키, 모델, 언어 설정 확인
-    chrome.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage'], result => {
+    browser.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage']).then(result => {
         if (!result.geminiApiKey) {
             showTranslationPopup(selectedText, "Gemini API 키가 설정되지 않았습니다. 확장 프로그램 팝업에서 API 키를 설정해주세요.", rect.left, rect.bottom + 10);
             return;
@@ -398,14 +398,14 @@ function translateSelectedText() {
         const targetLanguage = result.targetLanguage || "ko"; // 기본값은 한국어
 
         // 번역 요청
-        chrome.runtime.sendMessage({
+        browser.runtime.sendMessage({
             action: "translateText",
             text: selectedText,
             sourceLanguage: sourceLanguage,
             targetLanguage: targetLanguage,
             apiKey: result.geminiApiKey,
             modelName: result.geminiModel
-        }, response => {
+        }).then(response => {
             if (response.success) {
                 showTranslationPopup(selectedText, response.translatedText, rect.left, rect.bottom + 10);
             } else {
@@ -498,7 +498,7 @@ document.addEventListener('click', function(e) {
 });
 
 // 배경 스크립트로부터 메시지 수신 (컨텍스트 메뉴 통합용)
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "translateSelection") {
         const selectedText = message.text;
 
@@ -511,7 +511,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         showTranslationPopup(selectedText, "번역 중...", rect.left, rect.bottom + 10);
 
         // API 키와 모델 확인
-        chrome.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage'], result => {
+        browser.storage.local.get(['geminiApiKey', 'geminiModel', 'sourceLanguage', 'targetLanguage']).then(result => {
             if (!result.geminiApiKey) {
                 showTranslationPopup(selectedText, "Gemini API 키가 설정되지 않았습니다. 확장 프로그램 팝업에서 API 키를 설정해주세요.", rect.left, rect.bottom + 10);
                 return;
@@ -522,14 +522,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             const targetLanguage = result.targetLanguage || "ko"; // 기본값은 한국어
 
             // 번역 요청
-            chrome.runtime.sendMessage({
+            browser.runtime.sendMessage({
                 action: "translateText",
                 text: selectedText,
                 sourceLanguage: sourceLanguage,
                 targetLanguage: targetLanguage,
                 apiKey: result.geminiApiKey,
                 modelName: result.geminiModel
-            }, response => {
+            }).then(response => {
                 if (response.success) {
                     showTranslationPopup(selectedText, response.translatedText, rect.left, rect.bottom + 10);
                 } else {
@@ -646,7 +646,6 @@ function addStyles() {
 function getModelDisplayName(modelName) {
     const modelDisplayNames = {
         "gemini-2.5-pro-exp-03-25": "Gemini 2.5 Pro 번역",
-        "gemini-2.0-pro-exp-02-05": "Gemini 2.0 Pro 번역",
         "gemini-2.0-flash": "Gemini 2.0 Flash 번역",
         "gemini-2.0-flash-thinking-exp-01-21": "Gemini 2.0 Flash Thinking 번역"
     };

@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // 모델 이름이 없는 경우 기본값 사용
-        const model = modelName || "gemini-2.0-pro-exp-02-05";
+        const model = modelName || "gemini-2.5-pro-exp-03-25";
         
         // 번역 요청을 background로 보내기
         return new Promise((resolve, reject) => {

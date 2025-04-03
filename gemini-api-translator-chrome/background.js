@@ -18,7 +18,7 @@ chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.local.get('geminiModel', result => {
         if (!result.geminiModel) {
             chrome.storage.local.set({
-                geminiModel: "gemini-2.0-pro-exp-02-05"
+                geminiModel: "gemini-2.5-pro-exp-03-25"
             });
         }
     });
@@ -50,7 +50,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         // 모델 이름이 없는 경우 저장된 모델 확인
         if (!modelName) {
             chrome.storage.local.get('geminiModel', result => {
-                const model = result.geminiModel || "gemini-2.0-pro-exp-02-05";
+                const model = result.geminiModel || "gemini-2.5-pro-exp-03-25";
                 handleTranslateRequest(message)
                     .then(result => {
                         sendResponse(result);
@@ -162,7 +162,7 @@ async function translateWithGemini(apiKey, modelName, systemPrompt, text, temper
       topK: topK,
       topP: topP,
       candidateCount: 1,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 8192,
     }
   };
   
@@ -209,20 +209,62 @@ async function translateWithGemini(apiKey, modelName, systemPrompt, text, temper
     try {
       const responseData = JSON.parse(responseText);
       
-      // 응답 구조 확인
-      if (responseData && 
-          responseData.candidates && 
-          responseData.candidates[0] && 
-          responseData.candidates[0].content && 
-          responseData.candidates[0].content.parts && 
-          responseData.candidates[0].content.parts[0] && 
-          responseData.candidates[0].content.parts[0].text) {
+      // 응답 구조 확인 - 다양한 응답 구조 지원
+      if (responseData && responseData.candidates && responseData.candidates[0]) {
+        // Gemini 2.5 및 Gemini 2.0 응답 형식 대응
+        if (responseData.candidates[0].content && 
+            responseData.candidates[0].content.parts && 
+            responseData.candidates[0].content.parts[0]) {
+          
+          // text 필드가 있는 경우 (일반적인 Gemini 응답)
+          if (responseData.candidates[0].content.parts[0].text) {
+            return responseData.candidates[0].content.parts[0].text;
+          }
+          
+          // text 필드는 없지만 다른 구조로 응답이 있는 경우
+          else if (typeof responseData.candidates[0].content.parts[0] === 'object') {
+            // 가능한 다른 필드들 확인
+            const part = responseData.candidates[0].content.parts[0];
+            
+            if (part.text !== undefined) return part.text;
+            if (part.textContent !== undefined) return part.textContent;
+            if (part.value !== undefined) return part.value;
+            
+            // 객체 자체를 문자열로 변환하여 반환
+            return JSON.stringify(part);
+          }
+        }
         
-        // 번역된 텍스트 반환
-        return responseData.candidates[0].content.parts[0].text;
-      } else {
-        throw new Error("API 응답 형식이 예상과 다릅니다.");
+        // 다른 구조의 응답인 경우 - candidates[0]에 직접 text가 있는 경우
+        else if (responseData.candidates[0].text) {
+          return responseData.candidates[0].text;
+        }
+        
+        // candidates[0]에 content는 없지만 다른 필드가 있는 경우
+        else if (typeof responseData.candidates[0] === 'object') {
+          // 가능한 필드 탐색
+          if (responseData.candidates[0].output) return responseData.candidates[0].output;
+          if (responseData.candidates[0].result) return responseData.candidates[0].result;
+          
+          // 객체를 문자열로 변환하여 반환
+          return JSON.stringify(responseData.candidates[0]);
+        }
       }
+      
+      // 응답에 candidates가 없지만 다른 필드에 텍스트가 있을 수 있음
+      else if (responseData) {
+        if (responseData.text) return responseData.text;
+        if (responseData.content) {
+          if (typeof responseData.content === 'string') return responseData.content;
+          if (responseData.content.text) return responseData.content.text;
+        }
+        if (responseData.result) return responseData.result;
+        if (responseData.message) return responseData.message;
+      }
+      
+      // 다양한 구조를 모두 확인해도 텍스트를 찾지 못한 경우
+      console.error("예상치 못한 API 응답 구조:", responseData);
+      throw new Error("API 응답 형식이 예상과 다릅니다. API 응답: " + JSON.stringify(responseData).substring(0, 100) + "...");
     } catch (error) {
       console.error("API 응답 파싱 오류:", error);
       throw new Error(`응답을 처리하는 중 오류가 발생했습니다: ${error.message}`);

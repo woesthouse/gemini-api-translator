@@ -16,7 +16,7 @@ function createTranslationPopup() {
     if (currentPopup && document.body.contains(currentPopup)) {
         // 모델 이름을 업데이트하기 위해 저장된 모델 정보를 가져옵니다
         chrome.storage.local.get('geminiModel', result => {
-            const modelName = result.geminiModel || "gemini-2.0-pro-exp-02-05";
+            const modelName = result.geminiModel || "gemini-2.5-pro-exp-03-25";
             const modelDisplay = getModelDisplayName(modelName);
 
             // 헤더 타이틀 업데이트
@@ -113,7 +113,7 @@ function createTranslationPopup() {
 
     // 현재 선택된 모델 정보 가져오기
     chrome.storage.local.get('geminiModel', result => {
-        const modelName = result.geminiModel || "gemini-2.0-pro-exp-02-05";
+        const modelName = result.geminiModel || "gemini-2.5-pro-exp-03-25";
         const modelDisplay = getModelDisplayName(modelName);
 
         // 헤더 타이틀 업데이트
@@ -646,7 +646,6 @@ function addStyles() {
 function getModelDisplayName(modelName) {
     const modelDisplayNames = {
         "gemini-2.5-pro-exp-03-25": "Gemini 2.5 Pro 번역",
-        "gemini-2.0-pro-exp-02-05": "Gemini 2.0 Pro 번역",
         "gemini-2.0-flash": "Gemini 2.0 Flash 번역",
         "gemini-2.0-flash-thinking-exp-01-21": "Gemini 2.0 Flash Thinking 번역"
     };

@@ -1,6 +1,6 @@
-# Gemini 번역기 - 파이어폭스 확장 프로그램
+# Gemini 번역기 - 확장 프로그램
 
-Google Gemini API를 사용한 텍스트 번역 파이어폭스 확장 프로그램입니다. 이 확장 프로그램은 gemini-2.5-pro-exp-03-25, gemini-2.0-pro-exp-02-05, gemini-2.0-flash, gemini-2.0-flash-thinking-exp-01-21 모델을 사용하여 웹 페이지의 텍스트를 번역합니다.
+Google Gemini API를 사용한 텍스트 번역 확장 프로그램입니다. 이 확장 프로그램은 gemini-2.5-pro-exp-03-25, gemini-2.0-flash, gemini-2.0-flash-thinking-exp-01-21 모델을 사용하여 웹 페이지의 텍스트를 번역합니다.
 
 ## 기능
 
@@ -31,7 +31,7 @@ Google Gemini API를 사용한 텍스트 번역 파이어폭스 확장 프로그
 
 ## 사용 방법
 
-1. 설치 후 파이어폭스 툴바에 있는 확장 프로그램 아이콘을 클릭합니다.
+1. 설치 후 툴바에 있는 확장 프로그램 아이콘을 클릭합니다.
 2. Google Gemini API 키를 입력하고 저장합니다.
    - API 키를 얻으려면 [Google AI Studio](https://ai.google.dev/)에 가입하고 API 키를 생성해야 합니다.
 3. 번역하려는 텍스트를 입력하고 원본 언어와 대상 언어를 선택한 다음 "번역하기" 버튼을 클릭합니다.
